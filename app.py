@@ -280,7 +280,6 @@ elif st.session_state.seccion_actual == "Inventario":
     df_ent = limpiar_dataframe_power_pivot(st.session_state.df_entidades_ruc.copy())
     df_stk = limpiar_dataframe_power_pivot(st.session_state.df_global_stock.copy())
 
-    # Filtrar estrictamente las columnas requeridas de la pestaña de Entidades y RUC
     cols_validas_en_df = []
     for c in df_ent.columns:
         c_clean = c.strip().lower()
@@ -301,7 +300,6 @@ elif st.session_state.seccion_actual == "Inventario":
     col_sn_inv = obtener_nombre_columna(df_inv, ['SN CPU/NB', 'Serie', 'Serial'])
     col_sn_stk = obtener_nombre_columna(df_stk, ['Serie', 'SN', 'Serial'])
 
-    # CRUCE ROBUSTO CON ENTIDADES Y RUC
     if col_ent_inv and col_ent_ent:
         df_inv_temp = df_inv.copy()
         df_ent_temp = df_ent.copy()
@@ -323,7 +321,6 @@ elif st.session_state.seccion_actual == "Inventario":
     else:
         df_master = df_inv.copy()
 
-    # Cruce complementario con Stock si aplica (ACTUALIZADO CON 'Tipo estado')
     if not df_stk.empty:
         cols_stock_requeridas = []
         for c_req in ['Part number', 'Tipo Item', 'Tipo estado', 'RMA', 'SN CAMBIO', 'Imagen requerida']:
@@ -459,6 +456,17 @@ elif st.session_state.seccion_actual == "Stock":
         df_f = df_stock.copy()
         for col in df_f.columns:
             df_f[col] = df_f[col].astype(str).str.strip().replace(['nan', 'None', 'NAT', 'nan'], '')
+
+        # Campo pequeño de búsqueda general en una columna angosta
+        col_busq_p1, col_busq_p2 = st.columns([1.5, 3.5])
+        with col_busq_p1:
+            busqueda_general_stock = st.text_input("🔍 Búsqueda rápida", "", key="filtro_busq_gen_stock", placeholder="Buscar término...")
+        
+        if busqueda_general_stock:
+            mask_gen = df_f.apply(lambda row: row.astype(str).str.contains(busqueda_general_stock, case=False, na=False).any(), axis=1)
+            df_f = df_f[mask_gen]
+            # Limpieza rigurosa para evitar filas vacías resultantes del filtro
+            df_f = df_f.replace(r'^\s*$', pd.NA, regex=True).dropna(how='all')
 
         with st.expander("🔍 Filtros avanzados", expanded=True):
             fc1, fc2, fc3 = st.columns(3)
