@@ -261,12 +261,18 @@ if st.session_state.seccion_actual == "Home":
 
 elif st.session_state.seccion_actual == "Inventario":
     # --- MÓDULO INVENTARIO MAESTRO ---
-    col_h1, col_h2 = st.columns([7, 3])
+    col_h1, col_h2 = st.columns([5, 5])
     with col_h1:
         st.markdown("<p style='font-size: 1.15rem; font-weight: 700; color: #0f172a; margin: 0;'>📦 Módulo de Inventario Maestro (Modelo Relacional)</p>", unsafe_allow_html=True)
     with col_h2:
-        if st.button("⬅️ Volver al Menú Principal", key="btn_inv_home"):
-            cambiar_seccion("Home")
+        sub_c1, sub_c2 = st.columns(2)
+        with sub_c1:
+            if st.button("🗑️ Limpiar", key="btn_limpiar_cols", use_container_width=True):
+                st.session_state.cols_inv_maestro = []
+                st.rerun()
+        with sub_c2:
+            if st.button("⬅️ Volver al Menú", key="btn_inv_home", use_container_width=True):
+                cambiar_seccion("Home")
             
     st.markdown("<hr style='margin: 4px 0 10px 0;'>", unsafe_allow_html=True)
 
@@ -317,10 +323,10 @@ elif st.session_state.seccion_actual == "Inventario":
     else:
         df_master = df_inv.copy()
 
-    # Cruce complementario con Stock si aplica
+    # Cruce complementario con Stock si aplica (ACTUALIZADO CON 'Tipo estado')
     if not df_stk.empty:
         cols_stock_requeridas = []
-        for c_req in ['Part number', 'Tipo Item', 'RMA', 'SN CAMBIO', 'Imagen requerida']:
+        for c_req in ['Part number', 'Tipo Item', 'Tipo estado', 'RMA', 'SN CAMBIO', 'Imagen requerida']:
             c_encontrada = obtener_nombre_columna(df_stk, [c_req])
             if c_encontrada and c_encontrada not in cols_stock_requeridas and c_encontrada not in df_master.columns:
                 cols_stock_requeridas.append(c_encontrada)
@@ -430,7 +436,6 @@ elif st.session_state.seccion_actual == "Inventario":
 
         df_final_mostrar.reset_index(drop=True, inplace=True)
 
-        # Texto informativo de registros mostrados (sin botones de descarga)
         st.markdown(f"<p style='font-size: 11px; color: #64748b; font-weight: 500; margin-bottom: 6px;'>Mostrando <b>{len(df_final_mostrar)}</b> registros coincidentes y <b>{len(st.session_state.cols_inv_maestro)}</b> columnas seleccionadas.</p>", unsafe_allow_html=True)
         
         st.dataframe(df_final_mostrar, use_container_width=True, height=380)
