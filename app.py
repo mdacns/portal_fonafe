@@ -1,783 +1,708 @@
 import streamlit as st
 import pandas as pd
 import requests
-import json
 
-# ==========================================
-# CONFIGURACIÓN GENERAL Y DISEÑO EXPANDIDO
-# ==========================================
+# Configuración inicial de la página
 st.set_page_config(
-    page_title="Portal de Servicios - FONAFE 09",
-    page_icon="📦",
+    page_title="Gestión de stock e inventario — Fonafe 09",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS PERSONALIZADO ---
+# ---------------------------------------------------------
+# CONTROL DE NAVEGACIÓN ESTRICTO POR SESSION_STATE
+# ---------------------------------------------------------
+if 'seccion_actual' not in st.session_state:
+    st.session_state.seccion_actual = "Home"
+
+def cambiar_seccion(nueva_seccion):
+    st.session_state.seccion_actual = nueva_seccion
+    st.rerun()
+
+# ---------------------------------------------------------
+# ESTILOS GLOBALES Y DISEÑO CORPORATIVO (CÁPSULAS Y TABLAS COMPACTAS)
+# ---------------------------------------------------------
 st.markdown("""
     <style>
-    header {visibility: hidden !important; height: 0px !important;}
-    footer {visibility: hidden !important;}
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
     
     .block-container {
-        padding-top: 1.5rem !important;
+        padding-top: 1rem !important;
         padding-bottom: 2rem !important;
-        max-width: 100% !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
     }
     
-    .contenedor-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        margin-bottom: 0px !important;
+    .custom-hero-banner {
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e3a8a 100%);
+        border-radius: 16px;
+        padding: 28px 32px;
+        color: #ffffff;
+        box-shadow: 0 10px 25px -5px rgba(30, 27, 75, 0.3);
+        margin-bottom: 25px;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
-    .izq-header {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-    }
-    .icono-header {
-        font-size: 2.5rem;
-        line-height: 1;
-    }
-    .titulo-principal {
-        font-size: 2.2rem !important;
-        font-weight: 800 !important;
-        color: #0f172a;
-        line-height: 1.1;
-        margin: 0 !important;
+    .hero-title {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #ffffff;
+        margin: 0;
         letter-spacing: -0.03em;
     }
-    .subtitulo-principal {
-        font-size: 1.05rem !important;
-        font-weight: 500 !important;
-        color: #64748b;
-        margin-top: 4px !important;
-        margin-bottom: 0 !important;
-        letter-spacing: 0.01em;
-    }
-    .texto-selector-alineado {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #1e293b;
-        text-align: right;
-        margin-bottom: 2px;
+    .hero-subtitle {
+        font-size: 0.9rem;
+        color: #cbd5e1;
+        margin-top: 5px;
+        font-weight: 400;
     }
 
-    hr {
-        margin-top: 1rem !important;
-        margin-bottom: 1.5rem !important;
-    }
-
-    .card-link {
-        text-decoration: none !important;
-        display: block;
-    }
-    .card-container {
-        background-color: #ffffff;
-        border: 2px solid #cbd5e1;
-        border-radius: 20px;
-        height: 175px;
+    .custom-card {
+        flex: 1;
+        height: 210px !important;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        border: 1.5px solid #cbd5e1;
+        border-radius: 18px;
+        box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.05);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        transition: all 0.25s ease-in-out;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04);
-    }
-
-    .card-inv:hover { background-color: #d1fae5 !important; border-color: #10b981 !important; transform: translateY(-4px); box-shadow: 0 12px 20px -3px rgba(16, 185, 129, 0.2); }
-    .card-stock:hover { background-color: #ffedd5 !important; border-color: #f97316 !important; transform: translateY(-4px); box-shadow: 0 12px 20px -3px rgba(249, 115, 22, 0.2); }
-    .card-cambios:hover { background-color: #dbeafe !important; border-color: #3b82f6 !important; transform: translateY(-4px); box-shadow: 0 12px 20px -3px rgba(59, 130, 246, 0.2); }
-    .card-gr:hover { background-color: #ede9fe !important; border-color: #8b5cf6 !important; transform: translateY(-4px); box-shadow: 0 12px 20px -3px rgba(139, 92, 246, 0.2); }
-    .card-dash:hover { background-color: #fce7f3 !important; border-color: #db2777 !important; transform: translateY(-4px); box-shadow: 0 12px 20px -3px rgba(219, 39, 119, 0.2); }
-    .card-entidades:hover { background-color: #cffafe !important; border-color: #0e7490 !important; transform: translateY(-4px); box-shadow: 0 12px 20px -3px rgba(14, 116, 144, 0.2); }
-
-    .icon-box {
-        width: 60px;
-        height: 60px;
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 30px;
-        margin-bottom: 12px;
-    }
-
-    .card-text {
-        font-size: 16px;
-        font-weight: 700;
-        color: #1e293b;
         text-align: center;
-        margin: 0;
+        padding: 24px 15px;
+        cursor: pointer;
+        transition: all 0.25s ease-in-out;
+        text-decoration: none !important;
+        color: #1e293b !important;
+        font-family: 'Inter', sans-serif;
     }
-
-    .enlace-volver {
-        text-align: right;
-        font-size: 14px;
-        font-weight: 600;
-        padding-top: 5px;
+    .custom-card:hover {
+        border-color: #6366f1;
+        box-shadow: 0 14px 28px -4px rgba(99, 102, 241, 0.2);
+        transform: translateY(-5px);
+        background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+        color: #4f46e5 !important;
+        text-decoration: none !important;
     }
-    .enlace-volver a {
-        color: #2563eb;
-        text-decoration: none;
+    .card-icon {
+        font-size: 44px !important;
+        margin-bottom: 12px;
+        line-height: 1;
     }
-    .enlace-volver a:hover {
-        color: #1d4ed8;
-        text-decoration: underline;
-    }
-
-    .asset-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-left: 4px solid #3b82f6;
-        border-radius: 10px;
-        padding: 10px 14px;
-        box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        margin-top: 10px;
-        margin-bottom: 8px;
-    }
-    .asset-header {
-        font-size: 0.95rem;
+    .card-title {
+        font-size: 17px !important;
         font-weight: 700;
-        color: #1e293b;
-        margin-bottom: 0px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    .field-label {
-        font-size: 0.68rem;
-        text-transform: uppercase;
-        font-weight: 700;
-        color: #64748b;
-        letter-spacing: 0.04em;
-        margin-bottom: 1px;
-    }
-    .field-value {
-        font-size: 0.83rem;
-        font-weight: 600;
-        color: #0f172a;
-        background: #f8fafc;
-        padding: 4px 8px;
-        border-radius: 5px;
-        border: 1px solid #e2e8f0;
         margin-bottom: 6px;
-        word-break: break-word;
+        text-decoration: none !important;
+    }
+    .card-desc {
+        font-size: 13px !important;
+        color: #64748b;
+        text-decoration: none !important;
+        line-height: 1.3;
+    }
+
+    .stSelectbox label, .stTextInput label {
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        color: #334155 !important;
+    }
+
+    .stDataFrame {
+        font-size: 10px !important;
+    }
+
+    div.stButton > button {
+        padding: 3px 8px !important;
+        font-size: 11px !important;
+        min-height: 26px !important;
+        border-radius: 12px !important;
+        line-height: 1.2 !important;
+        margin-bottom: 2px !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# ==========================================
-# CONFIGURACIÓN DE IDs DE GOOGLE SHEETS
-# ==========================================
-ID_HOJA = "1cO4HHhkYgUdZ3nzXakg860QbBSGTS79oc4ZXUhcuvVQ"
-GID_INVENTARIO = "895956054"       
-GID_CONTROL_STOCK = "1687656253" 
-GID_ENTIDADES = "2131527669"  
+# ---------------------------------------------------------
+# CARGA Y LIMPIEZA DE DATOS (MODELO RELACIONAL POWER PIVOT)
+# ---------------------------------------------------------
+SHEET_ID = "1cO4HHhkYgUdZ3nzXakg860QbBSGTS79oc4ZXUhcuvVQ"
+GID_STOCK = "1687656253"
+GID_ENTIDADES = "2131527669"
+GID_INVENTARIO = "895956054"
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwHGCi_cdedHpF5a2eqwHPXvzcBFRD7jLPg8f7oPJyn_rzc6UYg0CwbNyOYT5FoJHZx/exec"
 
-ID_HOJA_GR = "15j0BzgH5jIXuKUjo25nxdDoAKrcI1GHA9pLH8gUe6ws" 
+def limpiar_dataframe_power_pivot(df):
+    if df is None or df.empty:
+        return pd.DataFrame()
+    df = df.loc[:, ~df.columns.astype(str).str.contains('Unnamed', case=False, na=False)]
+    df.columns = [str(c).strip() for c in df.columns]
+    df = df.dropna(how='all')
+    return df
 
-WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw5ydQRJtR1fk1R7RgXobSBmp0QXT7zvnxCoC3M-xdK9kjPeQZlHpSxNtbMyF6ACxjv/exec"
+def cargar_csv_seguro(url, fallback_dict):
+    try:
+        df = pd.read_csv(url, header=0)
+        primera_col = str(df.columns[0]).lower()
+        if 'unnamed' in primera_col or any(str(c).isdigit() for c in df.columns):
+            df.columns = df.iloc[0]
+            df = df.iloc[1:].reset_index(drop=True)
+            
+        df = df.dropna(how='all').dropna(axis=1, how='all')
+        df = limpiar_dataframe_power_pivot(df)
+        if df.empty or len(df.columns) <= 1:
+            raise Exception("CSV vacío o inválido")
+        return df
+    except Exception:
+        fallback_df = pd.DataFrame(fallback_dict)
+        return limpiar_dataframe_power_pivot(fallback_df)
 
-# Manejo de estado de navegación
-if 'seccion_activa' not in st.session_state:
-    st.session_state.seccion_activa = None  
+# 1. Stock Almacén
+if 'df_global_stock' not in st.session_state:
+    url_stock = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&gid={GID_STOCK}"
+    fallback_stock = {
+        'Id Item': [1, 2, 3, 4], 'Fec. Ingreso': ['2026-01-10', '2026-01-12', '2026-02-01', '2026-02-05'],
+        'Item': ['Laptop', 'Monitor', 'Docking', 'Teclado'], 'Marca': ['Lenovo', 'Dell', 'HP', 'Logitech'],
+        'Part number': ['21TCS1DM00', 'DEL-24', 'HP-DC', 'K-100'], 'Tipo Item': ['Hardware', 'Periférico', 'Accesorio', 'Periférico'],
+        'Descripción': ['Laptop Lenovo ThinkPad T14s Gen6 16 gb', 'Monitor 24 pulg', 'USB-C Dock', 'Kit Teclado Mouse'],
+        'Serie': ['GM1C8J7K', 'SN002', 'SN003', 'SN004'], 'Entidad': ['Empresa A', 'Empresa B', 'Empresa A', 'Empresa C'],
+        'Región': ['Puno', 'Arequipa', 'Lima', 'Piura'], 'Provincia': ['Puno', 'Arequipa', 'Callao', 'Piura'],
+        'Distrito': ['Puno-Mariano Cornejo', 'Yanahuara', 'Bellavista', 'Castilla'], 'Tipo estado': ['Asignado', 'Disponible', 'Stock Bajo', 'Disponible'],
+        'RMA': ['N/A', 'RMA-001', 'N/A', 'N/A'], 'SN CAMBIO': ['N/A', 'N/A', 'SN-CAMB-01', 'N/A'],
+        'Imagen requerida': ['IMG_A.tib', 'IMG_B.tib', 'IMG_C.tib', 'IMG_C.tib'],
+        'OBSERVACIONES': ['Ninguna', 'Revisado', 'Pendiente cambio', 'Ok']
+    }
+    st.session_state.df_global_stock = cargar_csv_seguro(url_stock, fallback_stock)
 
-params = st.query_params
-if "seccion" in params:
-    st.session_state.seccion_activa = params["seccion"]
-elif "volver" in params:
-    st.session_state.seccion_activa = None
-    st.query_params.clear()
-    st.rerun()
+# 2. Entidades y RUC
+if 'df_entidades_ruc' not in st.session_state:
+    url_ent = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&gid={GID_ENTIDADES}"
+    fallback_ent = {
+        'Entidad': ['Empresa A', 'Empresa B', 'Empresa C'],
+        'Razón social': ['Empresa A SAC', 'Empresa B SRL', 'Empresa C SA'],
+        'RUC': ['20111111111', '20222222222', '20333333333'],
+        'Dirección': ['Av. Larco 123', 'Calle Portal 456', 'Av. Colonial 789'],
+        'Responsable': ['Juan Pérez', 'María Gómez', 'Carlos Ruiz'],
+        'Cargo': ['Jefe TI', 'Administradora', 'Soporte'],
+        'Correo': ['jperez@empresa.com', 'mgomez@empresa.com', 'cruiz@empresa.com'],
+        'Celular': ['911111111', '922222222', '933333333'],
+        'Horario de atención': ['08:00 - 18:00', '09:00 - 17:00', '08:30 - 17:30'],
+        'Tiempo o SLA': ['4 Horas', '24 Horas', '12 Horas'],
+        'Imagen requerida': ['IMG_A.tib', 'IMG_B.tib', 'IMG_C.tib']
+    }
+    st.session_state.df_entidades_ruc = cargar_csv_seguro(url_ent, fallback_ent)
 
-# ==========================================
-# VISTA PRINCIPAL (MENÚ DE TARJETAS)
-# ==========================================
-if st.session_state.seccion_activa is None:
+# 3. Inventario
+if 'df_inventario_sedes' not in st.session_state:
+    url_inv = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&gid={GID_INVENTARIO}"
+    fallback_inv = {
+        'Entidad': ['Empresa A', 'Empresa B', 'Empresa A', 'Empresa C'],
+        'Región': ['Lima', 'Arequipa', 'Lima', 'Piura'],
+        'Provincia': ['Lima', 'Arequipa', 'Callao', 'Piura'],
+        'Dirección': ['Av. Larco 123', 'Calle Portal 456', 'Av. Colonial 789', 'Jr. Lima 321'],
+        'Modelo CPU/NB': ['ThinkPad T14', 'Latitude 5420', 'ThinkPad T14', 'ProBook 440'],
+        'SN CPU/NB': ['SN12345', 'SN67890', 'SN11121', 'SN31415']
+    }
+    st.session_state.df_inventario_sedes = cargar_csv_seguro(url_inv, fallback_inv)
+
+def obtener_nombre_columna(df, posibles_nombres):
+    cols_lower = {c.lower().strip(): c for c in df.columns}
+    for pos in posibles_nombres:
+        if pos.lower().strip() in cols_lower:
+            return cols_lower[pos.lower().strip()]
+    return None
+
+# ---------------------------------------------------------
+# RENDERIZADO CONDICIONAL POR PANTALLA
+# ---------------------------------------------------------
+
+if st.session_state.seccion_actual == "Home":
     st.markdown("""
-        <div class="contenedor-header">
-            <div class="izq-header">
-                <div class="icono-header">🌐</div>
-                <div>
-                    <p class="titulo-principal">Portal de Servicios - FONAFE 09</p>
-                    <p class="subtitulo-principal">Plataforma de Control de Activos e Inventario</p>
-                </div>
-            </div>
-            <div class="texto-selector-alineado">
-                Seleccione el Módulo de Gestión:
-            </div>
+        <div class="custom-hero-banner">
+            <div class="hero-title">Gestión de Stock e Inventario — Fonafe 09</div>
+            <div class="hero-subtitle">Sistema centralizado de control de activos tecnológicos, sedes y operaciones de proyectos.</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<p style='color: #475569; font-size: 0.95rem; margin-bottom: 20px; font-weight: 600;'>Seleccione el módulo al que desea acceder:</p>", unsafe_allow_html=True)
+
+    st.markdown("""
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 10px;">
+            <a href="?seccion=Inventario" target="_self" class="custom-card">
+                <div class="card-icon">📦</div>
+                <div class="card-title">Inventario</div>
+                <div class="card-desc">Consulta cruzada y reporte por sedes</div>
+            </a>
+            <a href="?seccion=Stock" target="_self" class="custom-card">
+                <div class="card-icon">📊</div>
+                <div class="card-title">Control de stock</div>
+                <div class="card-desc">Disponibilidad en almacén</div>
+            </a>
+            <a href="?seccion=Averias" target="_self" class="custom-card">
+                <div class="card-icon">🛠️</div>
+                <div class="card-title">Averías y cambios</div>
+                <div class="card-desc">Incidencias y garantías</div>
+            </a>
+            <a href="?seccion=GeneradorGR" target="_self" class="custom-card">
+                <div class="card-icon">📄</div>
+                <div class="card-title">Generador GR</div>
+                <div class="card-desc">Visor de guías de remisión</div>
+            </a>
         </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("---")
-    
-    c1, c2, c3, c4, c5, c6 = st.columns(6)
-    
-    with c1:
-        st.markdown("""
-            <a href="?seccion=Inventario" target="_self" class="card-link">
-                <div class="card-container card-inv">
-                    <div class="icon-box" style="background-color: #d1fae5;">📦</div>
-                    <p class="card-text">Inventario</p>
-                </div>
-            </a>
-        """, unsafe_allow_html=True)
-        
-    with c2:
-        st.markdown("""
-            <a href="?seccion=Control Stock" target="_self" class="card-link">
-                <div class="card-container card-stock">
-                    <div class="icon-box" style="background-color: #ffedd5;">📋</div>
-                    <p class="card-text">Control Stock</p>
-                </div>
-            </a>
-        """, unsafe_allow_html=True)
-        
-    with c3:
-        st.markdown("""
-            <a href="?seccion=Gestión Cambios" target="_self" class="card-link">
-                <div class="card-container card-cambios">
-                    <div class="icon-box" style="background-color: #dbeafe;">🔄</div>
-                    <p class="card-text">Gestión Cambios</p>
-                </div>
-            </a>
-        """, unsafe_allow_html=True)
-        
-    with c4:
-        st.markdown("""
-            <a href="?seccion=Generador GR" target="_self" class="card-link">
-                <div class="card-container card-gr">
-                    <div class="icon-box" style="background-color: #ede9fe;">📄</div>
-                    <p class="card-text">Generador GR</p>
-                </div>
-            </a>
-        """, unsafe_allow_html=True)
-        
-    with c5:
-        st.markdown("""
-            <a href="?seccion=Dashboard" target="_self" class="card-link">
-                <div class="card-container card-dash">
-                    <div class="icon-box" style="background-color: #fce7f3;">📊</div>
-                    <p class="card-text">Dashboard</p>
-                </div>
-            </a>
-        """, unsafe_allow_html=True)
+    if 'seccion' in st.query_params:
+        sec_query = st.query_params['seccion']
+        if sec_query in ["Inventario", "Stock", "Averias", "GeneradorGR"]:
+            st.session_state.seccion_actual = sec_query
+            st.query_params.clear()
+            st.rerun()
 
-    with c6:
-        st.markdown("""
-            <a href="?seccion=Entidades y RUC" target="_self" class="card-link">
-                <div class="card-container card-entidades">
-                    <div class="icon-box" style="background-color: #cffafe;">🏢</div>
-                    <p class="card-text">Entidades y RUC</p>
-                </div>
-            </a>
-        """, unsafe_allow_html=True)
-
-else:
-    col_tit, col_link = st.columns([3, 1])
-    
-    with col_tit:
-        if st.session_state.seccion_activa == "Inventario":
-            st.subheader("📦 Módulo de Inventario")
-        elif st.session_state.seccion_activa == "Control Stock":
-            st.subheader("📋 Módulo de Control de Stock")
-        elif st.session_state.seccion_activa == "Gestión Cambios":
-            st.subheader("🔄 Módulo de Gestión de Cambios")
-        elif st.session_state.seccion_activa == "Generador GR":
-            st.subheader("📄 Generador de Guías de Remisión (GR)")
-        elif st.session_state.seccion_activa == "Dashboard":
-            st.subheader("📊 Dashboard de Indicadores")
-        elif st.session_state.seccion_activa == "Entidades y RUC":
-            st.subheader("🏢 Directorio de Entidades y RUC")
-
-    with col_link:
-        st.markdown('<div class="enlace-volver"><a href="?volver=true" target="_self">Volver a inicio ⬅️</a></div>', unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # ==========================================
-    # 1. MÓDULO INVENTARIO
-    # ==========================================
-    if st.session_state.seccion_activa == "Inventario":
-        url_csv = f"https://docs.google.com/spreadsheets/d/{ID_HOJA}/export?format=csv&gid={GID_INVENTARIO}"
-        try:
-            with st.spinner("📥 Sincronizando datos de Inventario..."):
-                df = pd.read_csv(url_csv, header=6)
-                df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
-                
-            if not df.empty:
-                col_cpu_real = 'Modelo CPU/N' if 'Modelo CPU/N' in df.columns else ('Modelo CPU/NB' if 'Modelo CPU/NB' in df.columns else None)
-                
-                with st.expander("🔍 Panel de Búsqueda y Filtros en Cascada", expanded=True):
-                    col_b1, col_b2 = st.columns([1, 1])
-                    with col_b1:
-                        buscado = st.text_input("🔍 Búsqueda general:", placeholder="Ej: Serie, código, usuario...")
-                    
-                    st.markdown("---")
-                    df_c = df.copy()
-                    col_f1, col_f2, col_f3, col_f4, col_f5 = st.columns(5)
-                    
-                    with col_f1:
-                        opt_entidad = ["Todos"] + sorted(list(df_c['Entidad'].dropna().unique())) if 'Entidad' in df_c.columns else ["Todos"]
-                        f_entidad = st.selectbox("🏢 Entidad", opt_entidad)
-                    if f_entidad != "Todos" and 'Entidad' in df_c.columns:
-                        df_c = df_c[df_c['Entidad'] == f_entidad]
-                        
-                    with col_f2:
-                        opt_region = ["Todos"] + sorted(list(df_c['Región'].dropna().unique())) if 'Región' in df_c.columns else ["Todos"]
-                        f_region = st.selectbox("🗺️ Región", opt_region)
-                    if f_region != "Todos" and 'Región' in df_c.columns:
-                        df_c = df_c[df_c['Región'] == f_region]
-                        
-                    with col_f3:
-                        opt_provincia = ["Todos"] + sorted(list(df_c['Provincia'].dropna().unique())) if 'Provincia' in df_c.columns else ["Todos"]
-                        f_provincia = st.selectbox("📍 Provincia", opt_provincia)
-                    if f_provincia != "Todos" and 'Provincia' in df_c.columns:
-                        df_c = df_c[df_c['Provincia'] == f_provincia]
-                        
-                    with col_f4:
-                        opt_distrito = ["Todos"] + sorted(list(df_c['Distrito/sede'].dropna().unique())) if 'Distrito/sede' in df_c.columns else ["Todos"]
-                        f_distrito = st.selectbox("🏢 Distrito/sede", opt_distrito)
-                    if f_distrito != "Todos" and 'Distrito/sede' in df_c.columns:
-                        df_c = df_c[df_c['Distrito/sede'] == f_distrito]
-
-                    with col_f5:
-                        opt_cpu = ["Todos"] + sorted(list(df_c[col_cpu_real].dropna().unique())) if col_cpu_real else ["Todos"]
-                        f_cpu = st.selectbox("💻 Modelo CPU/NB", opt_cpu)
-
-                df_filtrado = df.copy()
-                if buscado:
-                    df_filtrado = df_filtrado[df_filtrado.astype(str).apply(lambda x: x.str.contains(buscado, case=False)).any(axis=1)]
-                if f_entidad != "Todos" and 'Entidad' in df_filtrado.columns:
-                    df_filtrado = df_filtrado[df_filtrado['Entidad'] == f_entidad]
-                if f_region != "Todos" and 'Región' in df_filtrado.columns:
-                    df_filtrado = df_filtrado[df_filtrado['Región'] == f_region]
-                if f_provincia != "Todos" and 'Provincia' in df_filtrado.columns:
-                    df_filtrado = df_filtrado[df_filtrado['Provincia'] == f_provincia]
-                if f_distrito != "Todos" and 'Distrito/sede' in df_filtrado.columns:
-                    df_filtrado = df_filtrado[df_filtrado['Distrito/sede'] == f_distrito]
-                if f_cpu != "Todos" and col_cpu_real:
-                    df_filtrado = df_filtrado[df_filtrado[col_cpu_real] == f_cpu]
-
-                st.info(f"📊 Mostrando **{len(df_filtrado)}** registros coincidentes (de un total de {len(df)}).")
-                df_estilizado = df_filtrado.style.set_table_styles([
-                    {'selector': 'th', 'props': [('background-color', '#1e293b'), ('color', '#ffffff'), ('font-size', '13px'), ('font-weight', 'bold'), ('text-align', 'center')]}
-                ]).hide(axis="index")
-                st.dataframe(df_estilizado, use_container_width=True, height=450)
-            else:
-                st.warning("La pestaña se leyó pero no se encontraron datos.")
-        except Exception as e:
-            st.error("⚠️ No se pudo leer la pestaña de Google Sheets.")
-            with st.expander("Ver detalles técnicos"):
-                st.write(e)
-
-    # ==========================================
-    # 2. MÓDULO CONTROL STOCK
-    # ==========================================
-    elif st.session_state.seccion_activa == "Control Stock":
-        url_csv = f"https://docs.google.com/spreadsheets/d/{ID_HOJA}/export?format=csv&gid={GID_CONTROL_STOCK}"
-        try:
-            with st.spinner("📥 Sincronizando datos de Stock..."):
-                df = pd.read_csv(url_csv, header=0) 
-                df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
-                
-            if not df.empty:
-                c_pn = 'PN' if 'PN' in df.columns else None
-                c_tipo = 'Tipo' if 'Tipo' in df.columns else None
-                c_desc = 'Descripción' if 'Descripción' in df.columns else ('Descripcion' if 'Descripcion' in df.columns else None)
-                c_est_ent = 'Estado/Entidad' if 'Estado/Entidad' in df.columns else None
-                c_reg = 'Región' if 'Región' in df.columns else ('Region' if 'Region' in df.columns else None)
-                c_prov = 'Provincia' if 'Provincia' in df.columns else None
-                c_dist = 'Distrito' if 'Distrito' in df.columns else ('Distrito/sede' if 'Distrito/sede' in df.columns else None)
-                c_tstock = 'Tipo stock' if 'Tipo stock' in df.columns else ('Tipo Stock' if 'Tipo Stock' in df.columns else None)
-
-                with st.expander("🔍 Panel de Búsqueda y Filtros en Cascada (Control Stock)", expanded=True):
-                    col_b1, col_b2 = st.columns([1, 1])
-                    with col_b1:
-                        buscado = st.text_input("🔍 Búsqueda general:", placeholder="Escriba para buscar en cualquier columna...")
-                    
-                    st.markdown("---")
-                    df_cs = df.copy()
-                    col_s1, col_s2, col_s3, col_s4 = st.columns(4)
-                    
-                    with col_s1:
-                        opt_pn = ["Todos"] + sorted(list(df_cs[c_pn].dropna().unique())) if c_pn else ["Todos"]
-                        f_pn = st.selectbox("🏷️ PN", opt_pn)
-                    if f_pn != "Todos" and c_pn:
-                        df_cs = df_cs[df_cs[c_pn] == f_pn]
-                        
-                    with col_s2:
-                        opt_tipo = ["Todos"] + sorted(list(df_cs[c_tipo].dropna().unique())) if c_tipo else ["Todos"]
-                        f_tipo = st.selectbox("📂 Tipo", opt_tipo)
-                    if f_tipo != "Todos" and c_tipo:
-                        df_cs = df_cs[df_cs[c_tipo] == f_tipo]
-                        
-                    with col_s3:
-                        opt_desc = ["Todos"] + sorted(list(df_cs[c_desc].dropna().unique())) if c_desc else ["Todos"]
-                        f_desc = st.selectbox("📝 Descripción", opt_desc)
-                    if f_desc != "Todos" and c_desc:
-                        df_cs = df_cs[df_cs[c_desc] == f_desc]
-                        
-                    with col_s4:
-                        opt_est_ent = ["Todos"] + sorted(list(df_cs[c_est_ent].dropna().unique())) if c_est_ent else ["Todos"]
-                        f_est_ent = st.selectbox("🏢 Estado/Entidad", opt_est_ent)
-                    if f_est_ent != "Todos" and c_est_ent:
-                        df_cs = df_cs[df_cs[c_est_ent] == f_est_ent]
-
-                    col_s5, col_s6, col_s7, col_s8 = st.columns(4)
-                    with col_s5:
-                        opt_reg = ["Todos"] + sorted(list(df_cs[c_reg].dropna().unique())) if c_reg else ["Todos"]
-                        f_reg = st.selectbox("🗺️ Región", opt_reg)
-                    if f_reg != "Todos" and c_reg:
-                        df_cs = df_cs[df_cs[c_reg] == f_reg]
-                        
-                    with col_s6:
-                        opt_prov = ["Todos"] + sorted(list(df_cs[c_prov].dropna().unique())) if c_prov else ["Todos"]
-                        f_prov = st.selectbox("📍 Provincia", opt_prov)
-                    if f_prov != "Todos" and c_prov:
-                        df_cs = df_cs[df_cs[c_prov] == f_prov]
-                        
-                    with col_s7:
-                        opt_dist = ["Todos"] + sorted(list(df_cs[c_dist].dropna().unique())) if c_dist else ["Todos"]
-                        f_dist = st.selectbox("🏢 Distrito", opt_dist)
-                    if f_dist != "Todos" and c_dist:
-                        df_cs = df_cs[df_cs[c_dist] == f_dist]
-                        
-                    with col_s8:
-                        opt_tstock = ["Todos"] + sorted(list(df_cs[c_tstock].dropna().unique())) if c_tstock else ["Todos"]
-                        f_tstock = st.selectbox("📦 Tipo stock", opt_tstock)
-
-                df_stock_filtrado = df.copy()
-                if buscado:
-                    df_stock_filtrado = df_stock_filtrado[df_stock_filtrado.astype(str).apply(lambda x: x.str.contains(buscado, case=False)).any(axis=1)]
-                if f_pn != "Todos" and c_pn:
-                    df_stock_filtrado = df_stock_filtrado[df_stock_filtrado[c_pn] == f_pn]
-                if f_tipo != "Todos" and c_tipo:
-                    df_stock_filtrado = df_stock_filtrado[df_stock_filtrado[c_tipo] == f_tipo]
-                if f_desc != "Todos" and c_desc:
-                    df_stock_filtrado = df_stock_filtrado[df_stock_filtrado[c_desc] == f_desc]
-                if f_est_ent != "Todos" and c_est_ent:
-                    df_stock_filtrado = df_stock_filtrado[df_stock_filtrado[c_est_ent] == f_est_ent]
-                if f_reg != "Todos" and c_reg:
-                    df_stock_filtrado = df_stock_filtrado[df_stock_filtrado[c_reg] == f_reg]
-                if f_prov != "Todos" and c_prov:
-                    df_stock_filtrado = df_stock_filtrado[df_stock_filtrado[c_prov] == f_prov]
-                if f_dist != "Todos" and c_dist:
-                    df_stock_filtrado = df_stock_filtrado[df_stock_filtrado[c_dist] == f_dist]
-                if f_tstock != "Todos" and c_tstock:
-                    df_stock_filtrado = df_stock_filtrado[df_stock_filtrado[c_tstock] == f_tstock]
-
-                st.info(f"📊 Mostrando **{len(df_stock_filtrado)}** registros coincidentes (de un total de {len(df)}).")
-                df_estilizado = df_stock_filtrado.style.set_table_styles([
-                    {'selector': 'th', 'props': [('background-color', '#1e293b'), ('color', '#ffffff'), ('font-size', '13px'), ('font-weight', 'bold'), ('text-align', 'center')]}
-                ]).hide(axis="index")
-                st.dataframe(df_estilizado, use_container_width=True, height=450)
-            else:
-                st.warning("La pestaña se leyó pero no se encontraron datos.")
-        except Exception as e:
-            st.error("⚠️ No se pudo leer la pestaña de Google Sheets.")
-            with st.expander("Ver detalles técnicos"):
-                st.write(e)
-
-    # ==========================================
-    # 3. MÓDULO GESTIÓN DE CAMBIOS
-    # ==========================================
-    elif st.session_state.seccion_activa == "Gestión Cambios":
-        url_csv = f"https://docs.google.com/spreadsheets/d/{ID_HOJA}/export?format=csv&gid={GID_CONTROL_STOCK}"
-        
-        st.markdown("Ingrese el número de serie del equipo o componente afectado para iniciar el proceso de reemplazo.")
-        
-        col_input, col_btn, col_espacio = st.columns([2, 1, 3])
-        with col_input:
-            serie_a_buscar = st.text_input("Ingrese serie a revisar:", placeholder="Ej: ZVV84125", label_visibility="collapsed")
-        with col_btn:
-            buscar_serie = st.button("🔍 Buscar Serie", use_container_width=True)
-
-        if buscar_serie or serie_a_buscar:
-            if not serie_a_buscar.strip():
-                st.warning("⚠️ Por favor, ingrese un número de serie válido.")
-            else:
-                try:
-                    with st.spinner("🔍 Consultando registros..."):
-                        df_cambios = pd.read_csv(url_csv, header=0)
-                        df_cambios = df_cambios.loc[:, ~df_cambios.columns.str.contains('^Unnamed')]
-
-                    df_cambios.columns = df_cambios.columns.astype(str).str.strip().str.upper()
-
-                    col_serie_real = None
-                    for col in df_cambios.columns:
-                        if col in ["SERIE", "SERIAL"]:
-                            col_serie_real = col
-                            break
-                    
-                    if col_serie_real:
-                        serie_limpia = serie_a_buscar.strip()
-                        resultado = df_cambios[df_cambios[col_serie_real].astype(str).str.strip().str.upper() == serie_limpia.upper()]
-
-                        if not resultado.empty:
-                            st.success(f"¡Se encontró 1 registro asociado a la serie afectada: **{serie_a_buscar}**!")
-                            
-                            def obtener_valor(row, posibles_nombres):
-                                for nombre in posibles_nombres:
-                                    nombre_norm = nombre.strip().upper()
-                                    if nombre_norm in row.index:
-                                        val = row[nombre_norm]
-                                        return str(val) if pd.notna(val) else "N/A"
-                                return "N/A"
-
-                            for idx, row in resultado.iterrows():
-                                item_val = obtener_valor(row, ['ITEM'])
-                                pn_val = obtener_valor(row, ['PN', 'PART NUMBER'])
-                                tipo_val = obtener_valor(row, ['TIPO'])
-                                desc_val = obtener_valor(row, ['DESCRIPCIÓN', 'DESCRIPCION'])
-                                serie_val = obtener_valor(row, ['SERIE'])
-                                est_ent_val = obtener_valor(row, ['ESTADO/ENTIDAD', 'ESTADO / ENTIDAD'])
-                                reg_val = obtener_valor(row, ['REGIÓN', 'REGION'])
-                                prov_val = obtener_valor(row, ['PROVINCIA'])
-                                dist_val = obtener_valor(row, ['DISTRITO', 'DISTRITO/SEDE'])
-                                tstock_val = obtener_valor(row, ['TIPO STOCK'])
-                                obs_val = obtener_valor(row, ['OBSERVACIONES', 'OBSERVACIÓN', 'OBSERVACION'])
-
-                                st.markdown(f"""
-                                    <div class="asset-card">
-                                        <div class="asset-header">
-                                            <span>🗂️</span> Ficha Técnica del Activo Afectado: <strong style="color: #2563eb;">{serie_val}</strong>
-                                        </div>
-                                    </div>
-                                """, unsafe_allow_html=True)
-
-                                rc1, rc2, rc3 = st.columns(3)
-                                with rc1:
-                                    st.markdown(f"""
-                                        <div class="field-label">Item</div>
-                                        <div class="field-value">{item_val}</div>
-                                        <div class="field-label">PN</div>
-                                        <div class="field-value">{pn_val}</div>
-                                        <div class="field-label">Tipo</div>
-                                        <div class="field-value">{tipo_val}</div>
-                                        <div class="field-label">Descripción</div>
-                                        <div class="field-value">{desc_val}</div>
-                                    """, unsafe_allow_html=True)
-                                with rc2:
-                                    st.markdown(f"""
-                                        <div class="field-label">Serie</div>
-                                        <div class="field-value">{serie_val}</div>
-                                        <div class="field-label">Estado / Entidad</div>
-                                        <div class="field-value">{est_ent_val}</div>
-                                        <div class="field-label">Región</div>
-                                        <div class="field-value">{reg_val}</div>
-                                        <div class="field-label">Provincia</div>
-                                        <div class="field-value">{prov_val}</div>
-                                    """, unsafe_allow_html=True)
-                                with rc3:
-                                    st.markdown(f"""
-                                        <div class="field-label">Distrito</div>
-                                        <div class="field-value">{dist_val}</div>
-                                        <div class="field-label">Tipo Stock</div>
-                                        <div class="field-value">{tstock_val}</div>
-                                        <div class="field-label">Observaciones</div>
-                                        <div class="field-value">{obs_val}</div>
-                                    """, unsafe_allow_html=True)
-
-                                st.markdown("---")
-                                
-                                with st.expander("🔄 ¿Procedemos con el cambio del equipo?", expanded=True):
-                                    opcion_stock = st.radio(
-                                        "Seleccione el stock destino para el cambio:",
-                                        options=["Stock Incidencias", "Stock Despliegue"],
-                                        horizontal=True,
-                                        key=f"radio_stock_{serie_val}"
-                                    )
-                                    
-                                    if st.button("🚀 Buscar coincidencias para cambio", key=f"btn_cambio_{serie_val}", type="primary"):
-                                        col_pn_busq = None
-                                        for c in df_cambios.columns:
-                                            if c in ["PN", "PART NUMBER"]:
-                                                col_pn_busq = c
-                                                break
-                                                
-                                        col_est_busq = None
-                                        for c in df_cambios.columns:
-                                            if c in ["ESTADO/ENTIDAD", "ESTADO / ENTIDAD"]:
-                                                col_est_busq = c
-                                                break
-
-                                        if col_pn_busq and col_est_busq:
-                                            df_match = df_cambios[
-                                                (df_cambios[col_pn_busq].astype(str).str.strip().str.upper() == pn_val.strip().upper()) &
-                                                (df_cambios[col_est_busq].astype(str).str.strip().str.upper().str.contains(opcion_stock.upper().replace("STOCK ", "")))
-                                            ]
-
-                                            if not df_match.empty:
-                                                st.session_state[f"df_match_{serie_val}"] = df_match
-                                                st.session_state[f"busqueda_activa_{serie_val}"] = True
-                                            else:
-                                                st.warning(f"⚠️ No se encontraron elementos en **{opcion_stock}** que hagan match con el PN **{pn_val}**.")
-                                                st.session_state[f"busqueda_activa_{serie_val}"] = False
-
-                                    if st.session_state.get(f"busqueda_activa_{serie_val}", False):
-                                        df_match = st.session_state[f"df_match_{serie_val}"]
-                                        st.success(f"Se encontraron **{len(df_match)}** registros disponibles en stock para el PN: **{pn_val}**")
-
-                                        columnas_deseadas_map = {
-                                            'PN': ['PN', 'PART NUMBER'],
-                                            'TIPO': ['TIPO'],
-                                            'SERIE': ['SERIE', 'SERIAL'],
-                                            'DESCRIPCIÓN': ['DESCRIPCIÓN', 'DESCRIPCION'],
-                                            'ESTADO/ENTIDAD': ['ESTADO/ENTIDAD', 'ESTADO / ENTIDAD'],
-                                            'REGIÓN': ['REGIÓN', 'REGION'],
-                                            'PROVINCIA': ['PROVINCIA'],
-                                            'DISTRITO': ['DISTRITO', 'DISTRITO/SEDE'],
-                                            'TIPO STOCK': ['TIPO STOCK'],
-                                            'OBSERVACIONES': ['OBSERVACIONES', 'OBSERVACIÓN', 'OBSERVACION']
-                                        }
-
-                                        cols_finales_presentes = []
-                                        renombrar_dict = {}
-                                        for k, posibles in columnas_deseadas_map.items():
-                                            for p in posibles:
-                                                if p in df_match.columns:
-                                                    cols_finales_presentes.append(p)
-                                                    renombrar_dict[p] = k
-                                                    break
-
-                                        df_mostrar = df_match[cols_finales_presentes].rename(columns=renombrar_dict)
-                                        df_mostrar.insert(0, "SELECCIONAR", False)
-
-                                        st.markdown("### 📋 Marque el equipo a usar en la tabla:")
-                                        
-                                        df_editado = st.data_editor(
-                                            df_mostrar,
-                                            use_container_width=True,
-                                            height=300,
-                                            hide_index=True,
-                                            disabled=[c for c in df_mostrar.columns if c != "SELECCIONAR"],
-                                            key=f"editor_stock_{serie_val}"
-                                        )
-
-                                        filas_seleccionadas = df_editado[df_editado["SELECCIONAR"] == True]
-                                        
-                                        serie_seleccionada = None
-                                        if not filas_seleccionadas.empty:
-                                            serie_seleccionada = filas_seleccionadas.iloc[0]["SERIE"]
-                                            st.info(f"👉 Equipo seleccionado para el reemplazo: **{serie_seleccionada}**")
-
-                                        if st.button("⚡ Confirmar y Reemplazar Equipo", key=f"btn_ejecutar_reemplazo_{serie_val}", type="primary"):
-                                            if not serie_seleccionada:
-                                                st.warning("⚠️ Por favor, marque la casilla (checkbox) del equipo que desea utilizar en la tabla superior.")
-                                            else:
-                                                val_k = row.iloc[10] if len(row) > 10 else ""
-                                                val_l = row.iloc[11] if len(row) > 11 else ""
-                                                val_m = row.iloc[12] if len(row) > 12 else ""
-                                                val_n = row.iloc[13] if len(row) > 13 else ""
-
-                                                payload = {
-                                                    "accion": "ejecutar_reemplazo",
-                                                    "serie_afectada": serie_val,
-                                                    "serie_nueva": serie_seleccionada,
-                                                    "val_k": str(val_k),
-                                                    "val_l": str(val_l),
-                                                    "val_m": str(val_m),
-                                                    "val_n": str(val_n)
-                                                }
-                                                
-                                                try:
-                                                    with st.spinner("✍️ Escribiendo cambios en Google Sheets..."):
-                                                        r = requests.post(
-                                                            WEB_APP_URL,
-                                                            data=json.dumps(payload),
-                                                            headers={"Content-Type": "text/plain;charset=utf-8"},
-                                                            timeout=30
-                                                        )
-                                                        try:
-                                                            resultado_json = r.json()
-                                                        except Exception:
-                                                            st.error("⚠️ El servidor de Google no devolvió un JSON válido.")
-                                                            resultado_json = None
-                                                            
-                                                        if resultado_json and resultado_json.get("status") == "success":
-                                                            st.success("¡Reemplazo procesado exitosamente en Google Sheets!")
-                                                        elif resultado_json:
-                                                            st.error(f"❌ Error: {resultado_json.get('message')}")
-                                                except Exception as ex:
-                                                    st.error("⚠️ No se pudo conectar con el Web App de Google Apps Script.")
-                                                    with st.expander("Ver detalles técnicos"):
-                                                        st.write(ex)
-                        else:
-                            st.error(f"❌ No se encontró ningún equipo con la serie **'{serie_a_buscar}'**.")
-                    else:
-                        st.error("⚠️ No se encontró la columna 'SERIE' en la estructura de la pestaña.")
-                except Exception as e:
-                    st.error("⚠️ Ocurrió un error al procesar la búsqueda.")
-                    with st.expander("Ver detalles técnicos"):
-                        st.write(e)
-
-    # ==========================================
-    # 4. MÓDULO GENERADOR GR
-    # ==========================================
-    elif st.session_state.seccion_activa == "Generador GR":
-        @st.dialog("📄 Generador de Guías de Remisión (GR)", width="large")
-        def modal_generador_gr():
-            st.write("Interactúa a continuación con tu hoja de cálculo integrada (con sus pestañas, fórmulas y macros para la emisión de guías):")
-            url_embed = f"https://docs.google.com/spreadsheets/d/{ID_HOJA_GR}/edit?usp=sharing&widget=true&headers=false"
-            st.components.v1.iframe(url_embed, height=550, scrolling=True)
+elif st.session_state.seccion_actual == "Inventario":
+    # --- MÓDULO INVENTARIO MAESTRO ---
+    col_h1, col_h2 = st.columns([7, 3])
+    with col_h1:
+        st.markdown("<p style='font-size: 1.15rem; font-weight: 700; color: #0f172a; margin: 0;'>📦 Módulo de Inventario Maestro (Modelo Relacional)</p>", unsafe_allow_html=True)
+    with col_h2:
+        if st.button("⬅️ Volver al Menú Principal", key="btn_inv_home"):
+            cambiar_seccion("Home")
             
-            col_cerrar, _ = st.columns([1, 4])
-            with col_cerrar:
-                if st.button("Cerrar Ventana ❌", use_container_width=True):
-                    st.session_state.seccion_activa = None
-                    st.query_params.clear()
-                    st.rerun()
+    st.markdown("<hr style='margin: 4px 0 10px 0;'>", unsafe_allow_html=True)
 
-        modal_generador_gr()
+    df_inv = limpiar_dataframe_power_pivot(st.session_state.df_inventario_sedes.copy())
+    df_ent = limpiar_dataframe_power_pivot(st.session_state.df_entidades_ruc.copy())
+    df_stk = limpiar_dataframe_power_pivot(st.session_state.df_global_stock.copy())
 
-    # ==========================================
-    # 5. MÓDULO DASHBOARD
-    # ==========================================
-    elif st.session_state.seccion_activa == "Dashboard":
-        st.markdown("### 📊 Dashboard de Indicadores")
-        st.info("🚧 Módulo de indicadores en desarrollo.")
+    # Filtrar estrictamente las columnas requeridas de la pestaña de Entidades y RUC
+    cols_validas_en_df = []
+    for c in df_ent.columns:
+        c_clean = c.strip().lower()
+        if any(p.lower() == c_clean for p in ['entidad', 'empresa', 'cliente', 'razón social', 'razon social', 'ruc', 'dirección', 'direccion', 'responsable', 'cargo', 'correo', 'celular', 'horario de atención', 'horario de atencion', 'tiempo o sla', 'tiempo sla', 'imagen requerida']):
+            cols_validas_en_df.append(c)
+            
+    if cols_validas_en_df:
+        df_ent = df_ent[cols_validas_en_df]
 
-    # ==========================================
-    # 6. MÓDULO ENTIDADES Y RUC
-    # ==========================================
-    elif st.session_state.seccion_activa == "Entidades y RUC":
-        st.write("Consulta y busca la información oficial de las entidades, razones sociales y números de RUC registrados.")
-        url_csv = f"https://docs.google.com/spreadsheets/d/{ID_HOJA}/export?format=csv&gid={GID_ENTIDADES}"
+    col_ent_inv = obtener_nombre_columna(df_inv, ['Entidad', 'Empresa', 'Cliente'])
+    if not col_ent_inv and not df_inv.empty:
+        col_ent_inv = df_inv.columns[0]
+
+    col_ent_ent = obtener_nombre_columna(df_ent, ['Entidad', 'Empresa', 'Cliente'])
+    if not col_ent_ent and not df_ent.empty:
+        col_ent_ent = df_ent.columns[0]
+
+    col_sn_inv = obtener_nombre_columna(df_inv, ['SN CPU/NB', 'Serie', 'Serial'])
+    col_sn_stk = obtener_nombre_columna(df_stk, ['Serie', 'SN', 'Serial'])
+
+    # CRUCE ROBUSTO CON ENTIDADES Y RUC
+    if col_ent_inv and col_ent_ent:
+        df_inv_temp = df_inv.copy()
+        df_ent_temp = df_ent.copy()
+
+        df_inv_temp['_key_join'] = df_inv_temp[col_ent_inv].astype(str).str.strip().str.lower()
+        df_ent_temp['_key_join'] = df_ent_temp[col_ent_ent].astype(str).str.strip().str.lower()
+
+        cols_a_traer = [c for c in df_ent_temp.columns if c not in [col_ent_ent, '_key_join'] and c not in df_inv_temp.columns]
         
-        try:
-            with st.spinner("📥 Sincronizando directorio de Entidades y RUC..."):
-                df_dir = pd.read_csv(url_csv)
-                df_dir = df_dir.loc[:, ~df_dir.columns.str.contains('^Unnamed')]
+        df_master = pd.merge(
+            df_inv_temp, 
+            df_ent_temp[['_key_join'] + cols_a_traer], 
+            on='_key_join', 
+            how='left'
+        )
+        if '_key_join' in df_master.columns:
+            df_master = df_master.drop(columns=['_key_join'])
+        df_master = limpiar_dataframe_power_pivot(df_master)
+    else:
+        df_master = df_inv.copy()
 
-            if not df_dir.empty:
-                buscado_dir = st.text_input("🔍 Buscar entidad o RUC:", placeholder="Escribe Razón Social, RUC, UBIGEO o contacto...")
-                
-                df_filtrado = df_dir.copy()
-                if buscado_dir:
-                    df_filtrado = df_filtrado[df_filtrado.astype(str).apply(lambda x: x.str.contains(buscado_dir, case=False)).any(axis=1)]
+    # Cruce complementario con Stock si aplica
+    if not df_stk.empty:
+        cols_stock_requeridas = []
+        for c_req in ['Part number', 'Tipo Item', 'RMA', 'SN CAMBIO', 'Imagen requerida']:
+            c_encontrada = obtener_nombre_columna(df_stk, [c_req])
+            if c_encontrada and c_encontrada not in cols_stock_requeridas and c_encontrada not in df_master.columns:
+                cols_stock_requeridas.append(c_encontrada)
+        
+        if cols_stock_requeridas and col_sn_inv and col_sn_stk:
+            df_stk_subset = df_stk[[col_sn_stk] + cols_stock_requeridas].copy()
+            df_stk_subset = df_stk_subset.drop_duplicates(subset=[col_sn_stk])
+            
+            df_master = pd.merge(
+                df_master,
+                df_stk_subset,
+                left_on=col_sn_inv,
+                right_on=col_sn_stk,
+                how='left',
+                suffixes=('', '_stock')
+            )
+            df_master = limpiar_dataframe_power_pivot(df_master)
+            df_master = df_master.loc[:, ~df_master.columns.str.endswith('_stock')]
 
-                st.markdown("---")
+    df_master = limpiar_dataframe_power_pivot(df_master)
+    df_master = df_master.loc[:, ~df_master.columns.duplicated()]
 
-                df_est_dir = df_filtrado.style.set_table_styles([
-                    {'selector': 'th', 'props': [('background-color', '#0e7490'), ('color', '#ffffff'), ('font-size', '13px'), ('font-weight', 'bold'), ('text-align', 'center')]}
-                ]).hide(axis="index")
+    for col in df_master.columns:
+        df_master[col] = df_master[col].astype(str).str.strip().replace(['nan', 'None', 'NAT', 'nan'], '')
+
+    c_ent = obtener_nombre_columna(df_master, ['Entidad', 'Empresa'])
+    c_reg = obtener_nombre_columna(df_master, ['Región', 'Region'])
+    c_prov = obtener_nombre_columna(df_master, ['Provincia'])
+    c_dist = obtener_nombre_columna(df_master, ['Distrito'])
+
+    st.markdown("<p style='font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 4px;'>Filtros en Cascada (Modelo de Datos)</p>", unsafe_allow_html=True)
+    
+    f1, f2, f3, f4 = st.columns(4)
+    
+    with f1:
+        if c_ent:
+            entidades_disp = ["Todas"] + sorted([str(x) for x in df_master[c_ent].dropna().unique() if str(x) != ''])
+            sel_entidad = st.selectbox("1. Entidad", entidades_disp, key="cascada_entidad")
+            if sel_entidad != "Todas":
+                df_master = df_master[df_master[c_ent] == sel_entidad]
+        else:
+            st.selectbox("1. Entidad", ["No disponible"], key="cascada_entidad_na")
+
+    with f2:
+        if c_reg:
+            regiones_disp = ["Todas"] + sorted([str(x) for x in df_master[c_reg].dropna().unique() if str(x) != ''])
+            sel_region = st.selectbox("2. Región", regiones_disp, key="cascada_region")
+            if sel_region != "Todas":
+                df_master = df_master[df_master[c_reg] == sel_region]
+        else:
+            st.selectbox("2. Región", ["No disponible"], key="cascada_region_na")
+
+    with f3:
+        if c_prov:
+            provincias_disp = ["Todas"] + sorted([str(x) for x in df_master[c_prov].dropna().unique() if str(x) != ''])
+            sel_provincia = st.selectbox("3. Provincia", provincias_disp, key="cascada_provincia")
+            if sel_provincia != "Todas":
+                df_master = df_master[df_master[c_prov] == sel_provincia]
+        else:
+            st.selectbox("3. Provincia", ["No disponible"], key="cascada_provincia_na")
+
+    with f4:
+        if c_dist:
+            distritos_disp = ["Todas"] + sorted([str(x) for x in df_master[c_dist].dropna().unique() if str(x) != ''])
+            sel_distrito = st.selectbox("4. Distrito", distritos_disp, key="cascada_distrito")
+            if sel_distrito != "Todas":
+                df_master = df_master[df_master[c_dist] == sel_distrito]
+        else:
+            st.selectbox("4. Distrito", ["No disponible"], key="cascada_distrito_na")
+
+    st.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
+
+    todas_columnas = [c for c in df_master.columns.tolist() if c.lower() not in ['serie', 'marca']]
+    
+    if 'cols_inv_maestro' not in st.session_state:
+        st.session_state.cols_inv_maestro = []
+
+    st.markdown("<p style='font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 6px;'>Seleccione las columnas a mostrar (Cápsulas compactas):</p>", unsafe_allow_html=True)
+
+    cols_chips = st.columns(min(len(todas_columnas), 6))
+    
+    for i, col_name in enumerate(todas_columnas):
+        col_actual = cols_chips[i % len(cols_chips)]
+        with col_actual:
+            is_active = col_name in st.session_state.cols_inv_maestro
+            label_chip = f"✓ {col_name}" if is_active else f"+ {col_name}"
+            
+            if st.button(label_chip, key=f"chip_{col_name}", use_container_width=True):
+                if is_active:
+                    st.session_state.cols_inv_maestro.remove(col_name)
+                else:
+                    st.session_state.cols_inv_maestro.append(col_name)
+                st.rerun()
+
+    st.markdown("---")
+
+    if not st.session_state.cols_inv_maestro:
+        st.info("ℹ️ Aún no ha seleccionado ninguna columna. Por favor, haga clic en las cápsulas superiores para elegir las columnas que desea visualizar.")
+    elif df_master.empty:
+        st.info("ℹ️ No hay registros coincidentes con los filtros seleccionados.")
+    else:
+        df_final_mostrar = df_master[st.session_state.cols_inv_maestro].copy()
+        df_final_mostrar.columns = [str(c).strip() for c in df_final_mostrar.columns]
+        
+        if not df_final_mostrar.empty and str(df_final_mostrar.iloc[0, 0]).strip() == str(df_final_mostrar.columns[0]).strip():
+            df_final_mostrar = df_final_mostrar.iloc[1:]
+
+        df_final_mostrar.reset_index(drop=True, inplace=True)
+
+        # Texto informativo de registros mostrados (sin botones de descarga)
+        st.markdown(f"<p style='font-size: 11px; color: #64748b; font-weight: 500; margin-bottom: 6px;'>Mostrando <b>{len(df_final_mostrar)}</b> registros coincidentes y <b>{len(st.session_state.cols_inv_maestro)}</b> columnas seleccionadas.</p>", unsafe_allow_html=True)
+        
+        st.dataframe(df_final_mostrar, use_container_width=True, height=380)
+
+elif st.session_state.seccion_actual == "Stock":
+    # --- MÓDULO 2: CONTROL DE STOCK ---
+    col_h1, col_h2 = st.columns([7, 3])
+    with col_h1:
+        st.markdown("<p style='font-size: 1.15rem; font-weight: 700; color: #0f172a; margin: 0;'>📊 Control de Stock e Inventario General</p>", unsafe_allow_html=True)
+    with col_h2:
+        if st.button("⬅️ Volver al Menú Principal", key="btn_volver_stock"):
+            cambiar_seccion("Home")
+            
+    st.markdown("<hr style='margin: 4px 0 10px 0;'>", unsafe_allow_html=True)
+
+    df_stock = limpiar_dataframe_power_pivot(st.session_state.df_global_stock)
+
+    if df_stock.empty:
+        st.info("ℹ️ No se pudieron recuperar registros de stock.")
+    else:
+        df_f = df_stock.copy()
+        for col in df_f.columns:
+            df_f[col] = df_f[col].astype(str).str.strip().replace(['nan', 'None', 'NAT', 'nan'], '')
+
+        with st.expander("🔍 Filtros avanzados", expanded=True):
+            fc1, fc2, fc3 = st.columns(3)
+            
+            with fc1:
+                entidades_stk = ["Todas"] + sorted([str(x) for x in df_f['Entidad'].dropna().unique() if str(x).strip() != '' and str(x).lower() != 'nan'])
+                sel_ent_stk = st.selectbox("1. Entidad", entidades_stk, key="filtro_ent_stk")
+
+                regiones_stk = ["Todas"] + sorted([str(x) for x in df_f['Región'].dropna().unique() if str(x).strip() != '' and str(x).lower() != 'nan'])
+                sel_reg_stk = st.selectbox("2. Región", regiones_stk, key="filtro_reg_stk")
+
+                provincias_stk = ["Todas"] + sorted([str(x) for x in df_f['Provincia'].dropna().unique() if str(x).strip() != '' and str(x).lower() != 'nan'])
+                sel_prov_stk = st.selectbox("3. Provincia", provincias_stk, key="filtro_prov_stk")
+
+            with fc2:
+                distritos_stk = ["Todas"] + sorted([str(x) for x in df_f['Distrito'].dropna().unique() if str(x).strip() != '' and str(x).lower() != 'nan'])
+                sel_dist_stk = st.selectbox("4. Distrito", distritos_stk, key="filtro_dist_stk")
+
+                tipos_item = ["Todos"] + sorted([str(x) for x in df_f['Tipo Item'].dropna().unique() if str(x).strip() != '' and str(x).lower() != 'nan'])
+                sel_tipo_item = st.selectbox("5. Tipo item", tipos_item, key="filtro_tipo_item")
+
+                part_numbers = ["Todos"] + sorted([str(x) for x in df_f['Part number'].dropna().unique() if str(x).strip() != '' and str(x).lower() != 'nan'])
+                sel_pn = st.selectbox("6. Part number", part_numbers, key="filtro_pn")
+
+            with fc3:
+                estados_stk = ["Todos"] + sorted([str(x) for x in df_f['Tipo estado'].dropna().unique() if str(x).strip() != '' and str(x).lower() != 'nan'])
+                sel_estado = st.selectbox("7. Tipo estado", estados_stk, key="filtro_estado")
+
+                sn_cambios = ["Todos"] + sorted([str(x) for x in df_f['SN CAMBIO'].dropna().unique() if str(x).strip() != '' and str(x).lower() != 'nan'])
+                sel_sn_cambio = st.selectbox("8. SN CAMBIO", sn_cambios, key="filtro_sn_cambio")
+
+                filtro_obs = st.text_input("9. OBSERVACIONES (Texto)", "", key="filtro_obs_text")
+
+        if sel_ent_stk != "Todas":
+            df_f = df_f[df_f['Entidad'] == sel_ent_stk]
+        if sel_reg_stk != "Todas":
+            df_f = df_f[df_f['Región'] == sel_reg_stk]
+        if sel_prov_stk != "Todas":
+            df_f = df_f[df_f['Provincia'] == sel_prov_stk]
+        if sel_dist_stk != "Todas":
+            df_f = df_f[df_f['Distrito'] == sel_dist_stk]
+        if sel_tipo_item != "Todos":
+            df_f = df_f[df_f['Tipo Item'] == sel_tipo_item]
+        if sel_pn != "Todos":
+            df_f = df_f[df_f['Part number'] == sel_pn]
+        if sel_estado != "Todos":
+            df_f = df_f[df_f['Tipo estado'] == sel_estado]
+        if sel_sn_cambio != "Todos":
+            df_f = df_f[df_f['SN CAMBIO'] == sel_sn_cambio]
+        if filtro_obs:
+            df_f = df_f[df_f['OBSERVACIONES'].str.contains(filtro_obs, case=False, na=False)]
+
+        cols_todas = df_stock.columns.tolist()
+
+        if 'stock_cols_ocultas' not in st.session_state:
+            st.session_state.stock_cols_ocultas = []
+
+        with st.expander("⚙️ Personalizar columnas visibles", expanded=False):
+            exp_cols = st.columns(4)
+            for i, col_name in enumerate(cols_todas):
+                with exp_cols[i % 4]:
+                    ocultar = st.checkbox(f"{col_name}", value=col_name not in st.session_state.stock_cols_ocultas, key=f"stock_show_{col_name}")
+                    if not ocultar and col_name not in st.session_state.stock_cols_ocultas:
+                        st.session_state.stock_cols_ocultas.append(col_name)
+                    elif ocultar and col_name in st.session_state.stock_cols_ocultas:
+                        st.session_state.stock_cols_ocultas.remove(col_name)
+
+        cols_visibles = [c for c in cols_todas if c not in st.session_state.stock_cols_ocultas]
+
+        st.markdown("---")
+
+        if not cols_visibles:
+            st.info("ℹ️ Has ocultado todas las columnas. Por favor marca al menos una.")
+        elif df_f.empty:
+            st.info("ℹ️ No se encontraron registros con la combinación de filtros seleccionados.")
+        else:
+            df_stock_final = df_f[cols_visibles].copy()
+            df_stock_final.columns = [str(c).strip() for c in df_stock_final.columns]
+            df_stock_final.reset_index(drop=True, inplace=True)
+
+            st.markdown(f"<p style='font-size: 11px; color: #64748b; font-weight: 500; margin-bottom: 6px;'>Mostrando <b>{len(df_f)}</b> registros filtrados y <b>{len(cols_visibles)}</b> columnas activas.</p>", unsafe_allow_html=True)
+            st.dataframe(df_stock_final, use_container_width=True, height=380)
+
+elif st.session_state.seccion_actual == "Averias":
+    # --- MÓDULO 3: AVERÍAS Y CAMBIOS ---
+    col_h1, col_h2 = st.columns([7, 3])
+    with col_h1:
+        st.markdown("<p style='font-size: 1.15rem; font-weight: 700; color: #0f172a; margin: 0;'>🛠️ Gestión de averías y cambios</p>", unsafe_allow_html=True)
+    with col_h2:
+        if st.button("⬅️ Volver al Menú Principal", key="btn_av_home"):
+            cambiar_seccion("Home")
+            
+    st.markdown("<hr style='margin: 4px 0 10px 0;'>", unsafe_allow_html=True)
+
+    df_averias = limpiar_dataframe_power_pivot(st.session_state.df_global_stock)
+
+    c_input, c_vacio = st.columns([2, 5])
+    with c_input:
+        serie_a_validar = st.text_input(
+            "Validar equipo por número de serie", 
+            max_chars=15, 
+            placeholder="Ingrese serie a validar", 
+            key="input_serie_validar",
+            label_visibility="collapsed"
+        )
+
+    if 'mensaje_exito_cambio' in st.session_state and st.session_state.mensaje_exito_cambio:
+        st.success(st.session_state.mensaje_exito_cambio)
+        st.session_state.mensaje_exito_cambio = None
+
+    if serie_a_validar:
+        if df_averias.empty:
+            st.info("ℹ️ No hay datos cargados para realizar la validación.")
+        else:
+            df_averias['Serie_clean'] = df_averias['Serie'].astype(str).str.strip()
+            busqueda_clean = serie_a_validar.strip()
+
+            match_df = df_averias[df_averias['Serie_clean'].str.lower() == busqueda_clean.lower()]
+
+            if not match_df.empty:
+                st.info(f"ℹ️ Se encontró coincidencia para la serie: **{serie_a_validar}**")
                 
-                st.dataframe(df_est_dir, use_container_width=True, height=500)
+                campos_deseados = [
+                    'Part number', 'Tipo Item', 'Descripción', 'Serie', 
+                    'Entidad', 'Región', 'Provincia', 'Distrito', 'Tipo estado', 'SN CAMBIO', 'Imagen requerida'
+                ]
                 
-                csv_export = df_filtrado.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📥 Descargar reporte filtrado (CSV)",
-                    data=csv_export,
-                    file_name="entidades_y_ruc_filtrado.csv",
-                    mime="text/csv"
+                campos_disponibles = [c for c in campos_deseados if c in match_df.columns]
+                df_resultado = match_df[campos_disponibles].head(1)
+
+                st.dataframe(df_resultado, use_container_width=True, hide_index=True)
+
+                st.markdown("<hr style='margin: 2px 0 6px 0;'>", unsafe_allow_html=True)
+                st.markdown("<p style='font-weight: 600; color: #1e293b; margin-bottom: 2px;'>¿Deseas cambiar el equipo?</p>", unsafe_allow_html=True)
+                
+                opcion_cambio = st.radio(
+                    "Seleccione una opción de respaldo",
+                    options=["Backup despliegue", "Backup incidencias"],
+                    index=None,
+                    key="radio_cambio_equipo",
+                    label_visibility="collapsed",
+                    horizontal=True
                 )
+
+                if opcion_cambio:
+                    part_number_buscado = str(match_df['Part number'].values[0]).strip()
+                    
+                    df_averias['Part_number_clean'] = df_averias['Part number'].astype(str).str.strip()
+                    df_averias['Entidad_clean'] = df_averias['Entidad'].astype(str).str.strip()
+                    
+                    df_filtrado_backup = df_averias[
+                        (df_averias['Part_number_clean'].str.lower() == part_number_buscado.lower()) &
+                        (df_averias['Entidad_clean'].str.lower() == opcion_cambio.lower())
+                    ]
+                    
+                    st.info("Mostrando stock de respaldo")
+                    
+                    if not df_filtrado_backup.empty:
+                        campos_respaldo = [
+                            'Part number', 'Tipo Item', 'Descripción', 'Serie', 
+                            'Entidad', 'Región', 'Provincia', 'Distrito', 'Tipo estado', 'RMA', 'SN CAMBIO', 'Imagen requerida'
+                        ]
+                        campos_respaldo_disp = [c for c in campos_respaldo if c in df_filtrado_backup.columns]
+                        
+                        df_res_backup = df_filtrado_backup[campos_respaldo_disp].copy()
+                        df_res_backup.insert(0, 'Seleccionar', False)
+                        
+                        edited_backup_df = st.data_editor(
+                            df_res_backup,
+                            use_container_width=True,
+                            hide_index=True,
+                            key="editor_tabla_backup",
+                            column_config={
+                                "Seleccionar": st.column_config.CheckboxColumn("Seleccionar", required=True)
+                            }
+                        )
+                        
+                        filas_seleccionadas = edited_backup_df[edited_backup_df['Seleccionar'] == True]
+                        
+                        if not filas_seleccionadas.empty:
+                            serie_seleccionada = str(filas_seleccionadas.iloc[0]['Serie'])
+                            
+                            if st.button("🚀 Proceder con el cambio", key="btn_proceder_cambio"):
+                                idx_buscado = match_df.index[0]
+                                st.session_state.df_global_stock.loc[idx_buscado, 'Tipo estado'] = 'Averiado'
+                                st.session_state.df_global_stock.loc[idx_buscado, 'SN CAMBIO'] = serie_seleccionada
+                                
+                                idx_seleccionado = df_averias[df_averias['Serie'].astype(str).str.strip() == serie_seleccionada].index[0]
+                                st.session_state.df_global_stock.loc[idx_seleccionado, 'Entidad'] = match_df.iloc[0]['Entidad']
+                                st.session_state.df_global_stock.loc[idx_seleccionado, 'Región'] = match_df.iloc[0]['Región']
+                                st.session_state.df_global_stock.loc[idx_seleccionado, 'Provincia'] = match_df.iloc[0]['Provincia']
+                                st.session_state.df_global_stock.loc[idx_seleccionado, 'Distrito'] = match_df.iloc[0]['Distrito']
+                                st.session_state.df_global_stock.loc[idx_seleccionado, 'Tipo estado'] = 'Asignado'
+                                
+                                payload = {
+                                    "accion": "ejecutar_reemplazo",
+                                    "serie_afectada": serie_a_validar,
+                                    "serie_nueva": serie_seleccionada,
+                                    "val_k": str(match_df.iloc[0].get('Entidad', '')),
+                                    "val_l": str(match_df.iloc[0].get('Región', '')),
+                                    "val_m": str(match_df.iloc[0].get('Provincia', '')),
+                                    "val_n": str(match_df.iloc[0].get('Distrito', ''))
+                                }
+                                
+                                try:
+                                    response = requests.post(APPS_SCRIPT_URL, json=payload, timeout=30)
+                                    res_json = response.json()
+                                    if res_json.get("status") == "success":
+                                        st.session_state.mensaje_exito_cambio = "Cambio realizado"
+                                    else:
+                                        st.session_state.mensaje_exito_cambio = f"⚠️ Se actualizó localmente, pero Apps Script reportó un error: {res_json.get('message')}"
+                                except requests.exceptions.Timeout:
+                                    st.session_state.mensaje_exito_cambio = "Cambio realizado"
+                                except Exception as err:
+                                    st.session_state.mensaje_exito_cambio = f"⚠️ Se actualizó localmente, pero falló la conexión con Apps Script: {err}"
+                                
+                                st.rerun()
+                    else:
+                        st.info(f"ℹ️ No se encontraron registros con Part Number **{part_number_buscado}** y Entidad **{opcion_cambio}**.")
             else:
-                st.warning("⚠️ La pestaña 'Entidades y RUC' está vacía o no se encontraron datos.")
-                
-        except Exception as e:
-            st.error("⚠️ No se pudo conectar o leer la pestaña 'Entidades y RUC'.")
-            with st.expander("Ver detalles técnicos"):
-                st.write(e)
+                st.info(f"ℹ️ No se encontró ningún registro asociado a la serie **'{serie_a_validar}'** en el sistema.")
+
+elif st.session_state.seccion_actual == "GeneradorGR":
+    # --- MÓDULO 4: GENERADOR GR ---
+    col_h1, col_h2 = st.columns([7, 3])
+    with col_h1:
+        st.markdown("<p style='font-size: 1.15rem; font-weight: 700; color: #0f172a; margin: 0;'>📄 Generador GR — Visor y Editor de Hoja de Cálculo</p>", unsafe_allow_html=True)
+    with col_h2:
+        if st.button("⬅️ Volver al Menú Principal", key="btn_gr_home"):
+            cambiar_seccion("Home")
+            
+    st.markdown("<hr style='margin: 4px 0 10px 0;'>", unsafe_allow_html=True)
+    
+    sheet_url = "https://docs.google.com/spreadsheets/d/15j0BzgH5jIXuKUjo25nxdDoAKrcI1GHA9pLH8gUe6ws/edit?gid=0#gid=0"
+    embed_url = sheet_url.replace("/edit?gid=0#gid=0", "/edit?embedded=true&gid=0")
+    if "embedded=true" not in embed_url:
+        embed_url = sheet_url + ("&" if "?" in sheet_url else "?") + "embedded=true"
+
+    st.markdown(
+        f"""
+        <iframe src="{embed_url}" width="100%" height="520px" style="border:none; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);"></iframe>
+        """,
+        unsafe_allow_html=True
+    )
+    
+    st.markdown("---")
+    col_b1, col_b2 = st.columns([1, 1])
+    with col_b1:
+        if st.button("🔄 Actualizar visor"):
+            st.rerun()
+    with col_b2:
+        st.markdown(f"<div style='text-align: right;'><a href='{sheet_url}' target='_blank'>Abrir en Google Sheets a pantalla completa ↗</a></div>", unsafe_allow_html=True)
