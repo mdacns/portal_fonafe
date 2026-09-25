@@ -1177,11 +1177,18 @@ elif st.session_state.seccion_actual == "Mantenimiento":
                 nuevo_valor
             )
 
-          # 2. Enviar cambios a Google Apps Script para actualizar la hoja de cálculo
+          # 2. Preparar el diccionario de datos limpiando las claves y valores
+          fila_dict = df_editado_resultado.iloc[0].to_dict()
+          datos_limpios = {
+              str(k).strip(): ("" if pd.isna(v) else str(v))
+              for k, v in fila_dict.items()
+          }
+
+          # 3. Enviar cambios a Google Apps Script con la estructura correcta
           payload = {
               "accion": "actualizar",
               "serie": str(serie_a_editar).strip(),
-              "datos": df_editado_resultado.iloc[0].to_dict(),
+              "datos": datos_limpios,
           }
 
           try:
