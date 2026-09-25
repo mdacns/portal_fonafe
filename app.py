@@ -228,7 +228,7 @@ if st.session_state.seccion_actual == "Home":
     st.markdown("<p style='color: #475569; font-size: 0.95rem; margin-bottom: 20px; font-weight: 600;'>Seleccione el módulo al que desea acceder:</p>", unsafe_allow_html=True)
 
     st.markdown("""
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 10px;">
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-top: 10px;">
             <a href="?seccion=Inventario" target="_self" class="custom-card">
                 <div class="card-icon">📦</div>
                 <div class="card-title">Inventario</div>
@@ -244,6 +244,11 @@ if st.session_state.seccion_actual == "Home":
                 <div class="card-title">Averías y cambios</div>
                 <div class="card-desc">Incidencias y garantías</div>
             </a>
+            <a href="?seccion=Mantenimiento" target="_self" class="custom-card">
+                <div class="card-icon">📝</div>
+                <div class="card-title">Mantenimiento</div>
+                <div class="card-desc">Edición, traslados y bajas de activos</div>
+            </a>
             <a href="?seccion=GeneradorGR" target="_self" class="custom-card">
                 <div class="card-icon">📄</div>
                 <div class="card-title">Generador GR</div>
@@ -254,7 +259,7 @@ if st.session_state.seccion_actual == "Home":
     
     if 'seccion' in st.query_params:
         sec_query = st.query_params['seccion']
-        if sec_query in ["Inventario", "Stock", "Averias", "GeneradorGR"]:
+        if sec_query in ["Inventario", "Stock", "Averias", "Mantenimiento", "GeneradorGR"]:
             st.session_state.seccion_actual = sec_query
             st.query_params.clear()
             st.rerun()
@@ -457,7 +462,6 @@ elif st.session_state.seccion_actual == "Stock":
         for col in df_f.columns:
             df_f[col] = df_f[col].astype(str).str.strip().replace(['nan', 'None', 'NAT', 'nan'], '')
 
-        # Campo pequeño de búsqueda general en una columna angosta
         col_busq_p1, col_busq_p2 = st.columns([1.5, 3.5])
         with col_busq_p1:
             busqueda_general_stock = st.text_input("🔍 Búsqueda rápida", "", key="filtro_busq_gen_stock", placeholder="Buscar término...")
@@ -465,7 +469,6 @@ elif st.session_state.seccion_actual == "Stock":
         if busqueda_general_stock:
             mask_gen = df_f.apply(lambda row: row.astype(str).str.contains(busqueda_general_stock, case=False, na=False).any(), axis=1)
             df_f = df_f[mask_gen]
-            # Limpieza rigurosa para evitar filas vacías resultantes del filtro
             df_f = df_f.replace(r'^\s*$', pd.NA, regex=True).dropna(how='all')
 
         with st.expander("🔍 Filtros avanzados", expanded=True):
@@ -688,6 +691,77 @@ elif st.session_state.seccion_actual == "Averias":
                         st.info(f"ℹ️ No se encontraron registros con Part Number **{part_number_buscado}** y Entidad **{opcion_cambio}**.")
             else:
                 st.info(f"ℹ️ No se encontró ningún registro asociado a la serie **'{serie_a_validar}'** en el sistema.")
+
+elif st.session_state.seccion_actual == "Mantenimiento":
+    # --- MÓDULO 5: MANTENIMIENTO, TRASLADOS Y BAJAS ---
+    col_h1, col_h2 = st.columns([7, 3])
+    with col_h1:
+        st.markdown("<p style='font-size: 1.15rem; font-weight: 700; color: #0f172a; margin: 0;'>📝 Mantenimiento, Traslados y Bajas de Activos</p>", unsafe_allow_html=True)
+    with col_h2:
+        if st.button("⬅️ Volver al Menú Principal", key="btn_mant_home"):
+            cambiar_seccion("Home")
+            
+    st.markdown("<hr style='margin: 4px 0 10px 0;'>", unsafe_allow_html=True)
+
+    if 'mensaje_exito_mant' in st.session_state and st.session_state.mensaje_exito_mant:
+        st.success(st.session_state.mensaje_exito_mant)
+        st.session_state.mensaje_exito_mant = None
+
+    c_input_m, c_vacio_m = st.columns([2, 5])
+    with c_input_m:
+        serie_a_editar = st.text_input(
+            "Buscar activo por número de serie", 
+            max_chars=20, 
+            placeholder="Ej. GM1C8J7K o SN12345", 
+            key="input_serie_editar"
+        )
+
+    df_stock_mant = st.session_state.df_global_stock
+
+    if serie_a_editar:
+        if df_stock_mant.empty:
+            st.info("ℹ️ No hay datos de stock cargados.")
+        else:
+            df_stock_mant['Serie_clean'] = df_stock_mant['Serie'].astype(str).str.strip()
+            busq_edit_clean = serie_a_editar.strip()
+            match_edit = df_stock_mant[df_stock_mant['Serie_clean'].str.lower() == busq_edit_clean.lower()]
+
+            if not match_edit.empty:
+                st.info(f"✏️ Editando registro para la serie: **{serie_a_editar}** (Modifique directamente en la tabla y guarde)")
+
+                idx_registro = match_edit.index[0]
+                df_fila_editar = match_edit.drop(columns=['Serie_clean']).copy()
+
+                estados_disponibles_lista = [
+                    "Asignado", "Averiado", "Backup", "Baja", 
+                    "Disponible", "En retorno", "Por garantía", "Por recojo", "Semilla"
+                ]
+
+                config_columnas_editor = {}
+                if 'Tipo estado' in df_fila_editar.columns:
+                    config_columnas_editor["Tipo estado"] = st.column_config.SelectboxColumn(
+                        "Tipo estado",
+                        options=estados_disponibles_lista,
+                        required=True
+                    )
+
+                df_editado_resultado = st.data_editor(
+                    df_fila_editar,
+                    use_container_width=True,
+                    hide_index=True,
+                    key=f"data_editor_activo_{idx_registro}",
+                    column_config=config_columnas_editor
+                )
+
+                if st.button("💾 Guardar cambios del activo", key="btn_guardar_cambios_activo"):
+                    for col_mod in df_editado_resultado.columns:
+                        nuevo_valor = df_editado_resultado.iloc[0][col_mod]
+                        st.session_state.df_global_stock.loc[idx_registro, col_mod] = nuevo_valor
+                    
+                    st.session_state.mensaje_exito_mant = f"✅ ¡Los cambios para la serie '{serie_a_editar}' se guardaron correctamente!"
+                    st.rerun()
+            else:
+                st.warning(f"⚠️ No se encontró ningún equipo con la serie **'{serie_a_editar}'** en el stock actual.")
 
 elif st.session_state.seccion_actual == "GeneradorGR":
     # --- MÓDULO 4: GENERADOR GR ---
