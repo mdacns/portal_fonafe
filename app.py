@@ -152,22 +152,19 @@ def limpiar_dataframe_power_pivot(df):
   return df
 
 
-def cargar_csv_seguro(url, fallback_dict):
-  try:
-    df = pd.read_csv(url, header=0)
-    primera_col = str(df.columns[0]).lower()
-    if "unnamed" in primera_col or any(str(c).isdigit() for c in df.columns):
-      df.columns = df.iloc[0]
-      df = df.iloc[1:].reset_index(drop=True)
+@st.cache_data
+def cargar_csv_seguro(url):
+  df = pd.read_csv(url, header=0)
+  primera_col = str(df.columns[0]).lower()
+  if "unnamed" in primera_col or any(str(c).isdigit() for c in df.columns):
+    df.columns = df.iloc[0]
+    df = df.iloc[1:].reset_index(drop=True)
 
-    df = df.dropna(how="all").dropna(axis=1, how="all")
-    df = limpiar_dataframe_power_pivot(df)
-    if df.empty or len(df.columns) <= 1:
-      raise Exception("CSV vacío o inválido")
-    return df
-  except Exception:
-    fallback_df = pd.DataFrame(fallback_dict)
-    return limpiar_dataframe_power_pivot(fallback_df)
+  df = df.dropna(how="all").dropna(axis=1, how="all")
+  df = limpiar_dataframe_power_pivot(df)
+  if df.empty or len(df.columns) <= 1:
+    raise Exception("CSV vacío o inválido")
+  return df
 
 
 # 1. Stock Almacén
@@ -213,11 +210,14 @@ if "df_global_stock" not in st.session_state:
       "Imagen requerida": ["IMG_A.tib", "IMG_B.tib", "IMG_C.tib", "IMG_C.tib"],
       "OBSERVACIONES": ["Ninguna", "Revisado", "Pendiente cambio", "Ok"],
   }
-  st.session_state.df_global_stock = cargar_csv_seguro(
-      url_stock, fallback_stock
-  )
+  try:
+    st.session_state.df_global_stock = cargar_csv_seguro(url_stock)
+  except Exception:
+    st.session_state.df_global_stock = limpiar_dataframe_power_pivot(
+        pd.DataFrame(fallback_stock)
+    )
 
-# Normalización obligatoria para asegurar lectura correcta de columnas y series (ej. 'ZVV240XS')
+# Normalización obligatoria para asegurar lectura correcta de columnas y series
 if not st.session_state.df_global_stock.empty:
   st.session_state.df_global_stock.columns = [
       str(c).strip() for c in st.session_state.df_global_stock.columns
@@ -247,7 +247,12 @@ if "df_entidades_ruc" not in st.session_state:
       "Tiempo o SLA": ["4 Horas", "24 Horas", "12 Horas"],
       "Imagen requerida": ["IMG_A.tib", "IMG_B.tib", "IMG_C.tib"],
   }
-  st.session_state.df_entidades_ruc = cargar_csv_seguro(url_ent, fallback_ent)
+  try:
+    st.session_state.df_entidades_ruc = cargar_csv_seguro(url_ent)
+  except Exception:
+    st.session_state.df_entidades_ruc = limpiar_dataframe_power_pivot(
+        pd.DataFrame(fallback_ent)
+    )
 
 # 3. Inventario
 if "df_inventario_sedes" not in st.session_state:
@@ -270,7 +275,12 @@ if "df_inventario_sedes" not in st.session_state:
       ],
       "SN CPU/NB": ["SN12345", "SN67890", "SN11121", "SN31415"],
   }
-  st.session_state.df_inventario_sedes = cargar_csv_seguro(url_inv, fallback_inv)
+  try:
+    st.session_state.df_inventario_sedes = cargar_csv_seguro(url_inv)
+  except Exception:
+    st.session_state.df_inventario_sedes = limpiar_dataframe_power_pivot(
+        pd.DataFrame(fallback_inv)
+    )
 
 
 def obtener_nombre_columna(df, posibles_nombres):
@@ -1040,6 +1050,7 @@ elif st.session_state.seccion_actual == "Averias":
                       f" {err}"
                   )
 
+                st.cache_data.clear()
                 st.rerun()
           else:
             st.info(
@@ -1192,6 +1203,7 @@ elif st.session_state.seccion_actual == "Mantenimiento":
                 f" Sheets: {err}"
             )
 
+          st.cache_data.clear()
           st.rerun()
       else:
         st.warning(
@@ -1231,6 +1243,7 @@ elif st.session_state.seccion_actual == "GeneradorGR":
   col_b1, col_b2 = st.columns([1, 1])
   with col_b1:
     if st.button("🔄 Actualizar visor"):
+      st.cache_data.clear()
       st.rerun()
   with col_b2:
     st.markdown(
