@@ -677,13 +677,11 @@ elif st.session_state.seccion_actual == "Averias":
                                     response = requests.post(APPS_SCRIPT_URL, json=payload, timeout=30)
                                     res_json = response.json()
                                     if res_json.get("status") == "success":
-                                        st.session_state.mensaje_exito_cambio = "Cambio realizado"
+                                        st.session_state.mensaje_exito_cambio = "Cambio realizado en app y Google Sheets"
                                     else:
-                                        st.session_state.mensaje_exito_cambio = f"⚠️ Se actualizó localmente, pero Apps Script reportó un error: {res_json.get('message')}"
-                                except requests.exceptions.Timeout:
-                                    st.session_state.mensaje_exito_cambio = "Cambio realizado"
+                                        st.session_state.mensaje_exito_cambio = f"⚠️ Actualizado localmente, error en Sheets: {res_json.get('message')}"
                                 except Exception as err:
-                                    st.session_state.mensaje_exito_cambio = f"⚠️ Se actualizó localmente, pero falló la conexión con Apps Script: {err}"
+                                    st.session_state.mensaje_exito_cambio = f"⚠️ Actualizado localmente, fallo de red con Sheets: {err}"
                                 
                                 st.rerun()
                     else:
@@ -714,20 +712,17 @@ elif st.session_state.seccion_actual == "Mantenimiento":
             key="input_serie_editar"
         )
 
-    # Limpieza previa de columnas en el DataFrame global
     if not st.session_state.df_global_stock.empty:
         st.session_state.df_global_stock.columns = [str(c).strip() for c in st.session_state.df_global_stock.columns]
 
     df_stock_mant = st.session_state.df_global_stock
 
-    # Campos requeridos para edición
     campos_requeridos = [
         'Serie', 'Entidad', 'Región', 'Provincia', 'Distrito', 
         'Tipo estado', 'RMA', 'SN CAMBIO', 'GR SONDA', 'GR FISICA', 
         'COURIER', 'TICKET ARANDA', 'OBSERVACIONES'
     ]
 
-    # Garantizar que todas las columnas requeridas existan ANTES de filtrar
     for col_req in campos_requeridos:
         if col_req not in df_stock_mant.columns:
             df_stock_mant[col_req] = "N/A"
@@ -746,17 +741,9 @@ elif st.session_state.seccion_actual == "Mantenimiento":
                 idx_registro = match_edit.index[0]
                 df_fila_editar = match_edit[campos_requeridos].copy()
 
-                # Lista de estados estandarizada y ampliada
                 estados_disponibles_lista = [
-                    "Asignado",
-                    "Averiado",
-                    "Backup",
-                    "Baja",
-                    "Disponible",
-                    "En retorno",
-                    "Por garantía",
-                    "Por recojo",
-                    "Semilla"
+                    "Asignado", "Averiado", "Backup", "Baja", 
+                    "Disponible", "En retorno", "Por garantía", "Por recojo", "Semilla"
                 ]
 
                 config_columnas_editor = {
@@ -776,11 +763,28 @@ elif st.session_state.seccion_actual == "Mantenimiento":
                 )
 
                 if st.button("💾 Guardar cambios del activo", key="btn_guardar_cambios_activo"):
+                    # 1. Actualizar memoria local
                     for col_mod in df_editado_resultado.columns:
                         nuevo_valor = df_editado_resultado.iloc[0][col_mod]
                         st.session_state.df_global_stock.loc[idx_registro, col_mod] = nuevo_valor
                     
-                    st.session_state.mensaje_exito_mant = f"✅ ¡Los cambios para la serie '{serie_a_editar}' se guardaron correctamente!"
+                    # 2. Enviar cambios a Google Apps Script para actualizar la hoja de cálculo
+                    payload = {
+                        "accion": "actualizar_activo",
+                        "serie": serie_a_editar,
+                        "datos": df_editado_resultado.iloc[0].to_dict()
+                    }
+                    
+                    try:
+                        response = requests.post(APPS_SCRIPT_URL, json=payload, timeout=30)
+                        res_json = response.json()
+                        if res_json.get("status") == "success":
+                            st.session_state.mensaje_exito_mant = f"✅ ¡Cambios guardados exitosamente en la aplicación y en Google Sheets!"
+                        else:
+                            st.session_state.mensaje_exito_mant = f"⚠️ Guardado local, pero Apps Script reportó: {res_json.get('message')}"
+                    except Exception as err:
+                        st.session_state.mensaje_exito_mant = f"⚠️ Guardado localmente, pero falló la conexión con Google Sheets: {err}"
+                    
                     st.rerun()
             else:
                 st.warning(f"⚠️ No se encontró ningún equipo con la serie **'{serie_a_editar}'** en el stock actual.")
