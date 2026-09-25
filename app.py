@@ -131,6 +131,8 @@ SHEET_ID = "1cO4HHhkYgUdZ3nzXakg860QbBSGTS79oc4ZXUhcuvVQ"
 GID_STOCK = "1687656253"
 GID_ENTIDADES = "2131527669"
 GID_INVENTARIO = "895956054"
+
+# URL actualizada de Google Apps Script
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwHGCi_cdedHpF5a2eqwHPXvzcBFRD7jLPg8f7oPJyn_rzc6UYg0CwbNyOYT5FoJHZx/exec"
 
 def limpiar_dataframe_power_pivot(df):
