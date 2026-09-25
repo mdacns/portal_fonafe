@@ -714,7 +714,23 @@ elif st.session_state.seccion_actual == "Mantenimiento":
             key="input_serie_editar"
         )
 
+    # Limpieza previa de columnas en el DataFrame global
+    if not st.session_state.df_global_stock.empty:
+        st.session_state.df_global_stock.columns = [str(c).strip() for c in st.session_state.df_global_stock.columns]
+
     df_stock_mant = st.session_state.df_global_stock
+
+    # Campos requeridos para edición
+    campos_requeridos = [
+        'Serie', 'Entidad', 'Región', 'Provincia', 'Distrito', 
+        'Tipo estado', 'RMA', 'SN CAMBIO', 'GR SONDA', 'GR FISICA', 
+        'COURIER', 'TICKET ARANDA', 'OBSERVACIONES'
+    ]
+
+    # Garantizar que todas las columnas requeridas existan ANTES de filtrar
+    for col_req in campos_requeridos:
+        if col_req not in df_stock_mant.columns:
+            df_stock_mant[col_req] = "N/A"
 
     if serie_a_editar:
         if df_stock_mant.empty:
@@ -728,18 +744,6 @@ elif st.session_state.seccion_actual == "Mantenimiento":
                 st.info(f"✏️ Editando registro para la serie: **{serie_a_editar}** (Modifique los campos solicitados y guarde)")
 
                 idx_registro = match_edit.index[0]
-                
-                # Campos restringidos y editables requeridos
-                campos_requeridos = [
-                    'Serie', 'Entidad', 'Región', 'Provincia', 'Distrito', 
-                    'Tipo estado', 'RMA', 'SN CAMBIO', 'GR SONDA', 'GR FISICA', 
-                    'COURIER', 'TICKET ARANDA', 'OBSERVACIONES'
-                ]
-                
-                for col_req in campos_requeridos:
-                    if col_req not in df_stock_mant.columns:
-                        df_stock_mant[col_req] = "N/A"
-
                 df_fila_editar = match_edit[campos_requeridos].copy()
 
                 # Lista de estados estandarizada y ampliada
