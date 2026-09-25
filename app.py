@@ -188,7 +188,7 @@ if "df_global_stock" not in st.session_state:
           "USB-C Dock",
           "Kit Teclado Mouse",
       ],
-      "Serie": ["GM1C8J7K", "SN002", "SN003", "SN004"],
+      "Serie": ["GM1C8J7K", "SN002", "SN003", "ZVV240XS"],
       "Entidad": ["Empresa A", "Empresa B", "Empresa A", "Empresa C"],
       "Región": ["Puno", "Arequipa", "Lima", "Piura"],
       "Provincia": ["Puno", "Arequipa", "Callao", "Piura"],
@@ -216,6 +216,16 @@ if "df_global_stock" not in st.session_state:
   st.session_state.df_global_stock = cargar_csv_seguro(
       url_stock, fallback_stock
   )
+
+# Normalización obligatoria para asegurar lectura correcta de columnas y series (ej. 'ZVV240XS')
+if not st.session_state.df_global_stock.empty:
+  st.session_state.df_global_stock.columns = [
+      str(c).strip() for c in st.session_state.df_global_stock.columns
+  ]
+  if "Serie" in st.session_state.df_global_stock.columns:
+    st.session_state.df_global_stock["Serie"] = (
+        st.session_state.df_global_stock["Serie"].astype(str).str.strip()
+    )
 
 # 2. Entidades y RUC
 if "df_entidades_ruc" not in st.session_state:
@@ -1068,7 +1078,7 @@ elif st.session_state.seccion_actual == "Mantenimiento":
     serie_a_editar = st.text_input(
         "Buscar activo por número de serie",
         max_chars=20,
-        placeholder="Ej. GM1C8J7K o SN12345",
+        placeholder="Ej. GM1C8J7K o ZVV240XS",
         key="input_serie_editar",
     )
 
@@ -1158,8 +1168,8 @@ elif st.session_state.seccion_actual == "Mantenimiento":
 
           # 2. Enviar cambios a Google Apps Script para actualizar la hoja de cálculo
           payload = {
-              "accion": "actualizar",  # Compatible con la acción que busca el Apps Script
-              "serie": serie_a_editar,
+              "accion": "actualizar",
+              "serie": str(serie_a_editar).strip(),
               "datos": df_editado_resultado.iloc[0].to_dict(),
           }
 
