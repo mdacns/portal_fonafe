@@ -170,6 +170,8 @@ if 'df_global_stock' not in st.session_state:
         'Región': ['Puno', 'Arequipa', 'Lima', 'Piura'], 'Provincia': ['Puno', 'Arequipa', 'Callao', 'Piura'],
         'Distrito': ['Puno-Mariano Cornejo', 'Yanahuara', 'Bellavista', 'Castilla'], 'Tipo estado': ['Asignado', 'Disponible', 'Stock Bajo', 'Disponible'],
         'RMA': ['N/A', 'RMA-001', 'N/A', 'N/A'], 'SN CAMBIO': ['N/A', 'N/A', 'SN-CAMB-01', 'N/A'],
+        'GR SONDA': ['N/A', 'N/A', 'N/A', 'N/A'], 'GR FISICA': ['N/A', 'N/A', 'N/A', 'N/A'],
+        'COURIER': ['N/A', 'N/A', 'N/A', 'N/A'], 'TICKET ARANDA': ['N/A', 'N/A', 'N/A', 'N/A'],
         'Imagen requerida': ['IMG_A.tib', 'IMG_B.tib', 'IMG_C.tib', 'IMG_C.tib'],
         'OBSERVACIONES': ['Ninguna', 'Revisado', 'Pendiente cambio', 'Ok']
     }
@@ -265,7 +267,6 @@ if st.session_state.seccion_actual == "Home":
             st.rerun()
 
 elif st.session_state.seccion_actual == "Inventario":
-    # --- MÓDULO INVENTARIO MAESTRO ---
     col_h1, col_h2 = st.columns([5, 5])
     with col_h1:
         st.markdown("<p style='font-size: 1.15rem; font-weight: 700; color: #0f172a; margin: 0;'>📦 Módulo de Inventario Maestro (Modelo Relacional)</p>", unsafe_allow_html=True)
@@ -443,7 +444,6 @@ elif st.session_state.seccion_actual == "Inventario":
         st.dataframe(df_final_mostrar, use_container_width=True, height=380)
 
 elif st.session_state.seccion_actual == "Stock":
-    # --- MÓDULO 2: CONTROL DE STOCK ---
     col_h1, col_h2 = st.columns([7, 3])
     with col_h1:
         st.markdown("<p style='font-size: 1.15rem; font-weight: 700; color: #0f172a; margin: 0;'>📊 Control de Stock e Inventario General</p>", unsafe_allow_html=True)
@@ -554,7 +554,6 @@ elif st.session_state.seccion_actual == "Stock":
             st.dataframe(df_stock_final, use_container_width=True, height=380)
 
 elif st.session_state.seccion_actual == "Averias":
-    # --- MÓDULO 3: AVERÍAS Y CAMBIOS ---
     col_h1, col_h2 = st.columns([7, 3])
     with col_h1:
         st.markdown("<p style='font-size: 1.15rem; font-weight: 700; color: #0f172a; margin: 0;'>🛠️ Gestión de averías y cambios</p>", unsafe_allow_html=True)
@@ -693,7 +692,6 @@ elif st.session_state.seccion_actual == "Averias":
                 st.info(f"ℹ️ No se encontró ningún registro asociado a la serie **'{serie_a_validar}'** en el sistema.")
 
 elif st.session_state.seccion_actual == "Mantenimiento":
-    # --- MÓDULO 5: MANTENIMIENTO, TRASLADOS Y BAJAS ---
     col_h1, col_h2 = st.columns([7, 3])
     with col_h1:
         st.markdown("<p style='font-size: 1.15rem; font-weight: 700; color: #0f172a; margin: 0;'>📝 Mantenimiento, Traslados y Bajas de Activos</p>", unsafe_allow_html=True)
@@ -727,23 +725,43 @@ elif st.session_state.seccion_actual == "Mantenimiento":
             match_edit = df_stock_mant[df_stock_mant['Serie_clean'].str.lower() == busq_edit_clean.lower()]
 
             if not match_edit.empty:
-                st.info(f"✏️ Editando registro para la serie: **{serie_a_editar}** (Modifique directamente en la tabla y guarde)")
+                st.info(f"✏️ Editando registro para la serie: **{serie_a_editar}** (Modifique los campos solicitados y guarde)")
 
                 idx_registro = match_edit.index[0]
-                df_fila_editar = match_edit.drop(columns=['Serie_clean']).copy()
+                
+                # Campos restringidos y editables requeridos
+                campos_requeridos = [
+                    'Serie', 'Entidad', 'Región', 'Provincia', 'Distrito', 
+                    'Tipo estado', 'RMA', 'SN CAMBIO', 'GR SONDA', 'GR FISICA', 
+                    'COURIER', 'TICKET ARANDA', 'OBSERVACIONES'
+                ]
+                
+                for col_req in campos_requeridos:
+                    if col_req not in df_stock_mant.columns:
+                        df_stock_mant[col_req] = "N/A"
 
+                df_fila_editar = match_edit[campos_requeridos].copy()
+
+                # Lista de estados estandarizada y ampliada
                 estados_disponibles_lista = [
-                    "Asignado", "Averiado", "Backup", "Baja", 
-                    "Disponible", "En retorno", "Por garantía", "Por recojo", "Semilla"
+                    "Asignado",
+                    "Averiado",
+                    "Backup",
+                    "Baja",
+                    "Disponible",
+                    "En retorno",
+                    "Por garantía",
+                    "Por recojo",
+                    "Semilla"
                 ]
 
-                config_columnas_editor = {}
-                if 'Tipo estado' in df_fila_editar.columns:
-                    config_columnas_editor["Tipo estado"] = st.column_config.SelectboxColumn(
+                config_columnas_editor = {
+                    "Tipo estado": st.column_config.SelectboxColumn(
                         "Tipo estado",
                         options=estados_disponibles_lista,
                         required=True
                     )
+                }
 
                 df_editado_resultado = st.data_editor(
                     df_fila_editar,
@@ -764,7 +782,6 @@ elif st.session_state.seccion_actual == "Mantenimiento":
                 st.warning(f"⚠️ No se encontró ningún equipo con la serie **'{serie_a_editar}'** en el stock actual.")
 
 elif st.session_state.seccion_actual == "GeneradorGR":
-    # --- MÓDULO 4: GENERADOR GR ---
     col_h1, col_h2 = st.columns([7, 3])
     with col_h1:
         st.markdown("<p style='font-size: 1.15rem; font-weight: 700; color: #0f172a; margin: 0;'>📄 Generador GR — Visor y Editor de Hoja de Cálculo</p>", unsafe_allow_html=True)
