@@ -10,23 +10,6 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# PANEL DE CONTROL LATERAL (Sincronización para usuarios)
-# ---------------------------------------------------------
-with st.sidebar:
-  st.markdown("### ⚙️ Sincronización")
-  st.markdown(
-      "<p style='font-size:12px;'>Si notas datos desactualizados, usa este"
-      " botón para forzar la recarga:</p>",
-      unsafe_allow_html=True,
-  )
-  if st.button("🔄 Sincronizar / Limpiar Caché", use_container_width=True):
-    st.cache_data.clear()
-    for key in list(st.session_state.keys()):
-      del st.session_state[key]
-    st.success("¡Caché limpiada con éxito!")
-    st.rerun()
-
-# ---------------------------------------------------------
 # CONTROL DE NAVEGACIÓN ESTRICTO POR SESSION_STATE
 # ---------------------------------------------------------
 if "seccion_actual" not in st.session_state:
@@ -169,8 +152,7 @@ def limpiar_dataframe_power_pivot(df):
   return df
 
 
-# TTL de 3600 segundos (1 hora) para auto-refrescar datos y evitar atascos de caché
-@st.cache_data(ttl=3600)
+@st.cache_data
 def cargar_csv_seguro(url):
   df = pd.read_csv(url, header=0)
   primera_col = str(df.columns[0]).lower()
@@ -661,7 +643,7 @@ elif st.session_state.seccion_actual == "Inventario":
     st.dataframe(df_final_mostrar, use_container_width=True, height=380)
 
 elif st.session_state.seccion_actual == "Stock":
-  col_h1, col_h2 = st.columns([7, 3])
+  col_h1, col_h2 = st.columns([5, 5])
   with col_h1:
     st.markdown(
         "<p style='font-size: 1.15rem; font-weight: 700; color: #0f172a; margin:"
@@ -669,8 +651,25 @@ elif st.session_state.seccion_actual == "Stock":
         unsafe_allow_html=True,
     )
   with col_h2:
-    if st.button("⬅️ Volver al Menú Principal", key="btn_volver_stock"):
-      cambiar_seccion("Home")
+    sub_c1, sub_c2 = st.columns(2)
+    with sub_c1:
+      if st.button(
+          "🔄 Limpiar caché",
+          key="btn_limpiar_cache_stock",
+          use_container_width=True,
+      ):
+        st.cache_data.clear()
+        if "df_global_stock" in st.session_state:
+          del st.session_state.df_global_stock
+        st.success(
+            "¡Caché limpiada y datos recargados correctamente!", icon="🔄"
+        )
+        st.rerun()
+    with sub_c2:
+      if st.button(
+          "⬅️ Volver", key="btn_volver_stock", use_container_width=True
+      ):
+        cambiar_seccion("Home")
 
   st.markdown("<hr style='margin: 4px 0 10px 0;'>", unsafe_allow_html=True)
 
