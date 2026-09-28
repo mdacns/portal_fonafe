@@ -217,7 +217,6 @@ if "df_global_stock" not in st.session_state:
         pd.DataFrame(fallback_stock)
     )
 
-# Normalización obligatoria para asegurar lectura correcta de columnas y series
 if not st.session_state.df_global_stock.empty:
   st.session_state.df_global_stock.columns = [
       str(c).strip() for c in st.session_state.df_global_stock.columns
@@ -706,10 +705,14 @@ elif st.session_state.seccion_actual == "Stock":
       df_f = df_f[mask_gen]
       df_f = df_f.replace(r"^\s*$", pd.NA, regex=True).dropna(how="all")
 
-    with st.expander("🔍 Filtros avanzados", expanded=True):
+    # =========================================================
+    # FILTROS EN CASCADA REALES PARA EL CONTROL DE STOCK
+    # =========================================================
+    with st.expander("🔍 Filtros avanzados en cascada", expanded=True):
       fc1, fc2, fc3 = st.columns(3)
 
       with fc1:
+        # 1. Entidad
         entidades_stk = ["Todas"] + sorted([
             str(x)
             for x in df_f["Entidad"].dropna().unique()
@@ -718,7 +721,10 @@ elif st.session_state.seccion_actual == "Stock":
         sel_ent_stk = st.selectbox(
             "1. Entidad", entidades_stk, key="filtro_ent_stk"
         )
+        if sel_ent_stk != "Todas":
+          df_f = df_f[df_f["Entidad"] == sel_ent_stk]
 
+        # 2. Región (depende de Entidad)
         regiones_stk = ["Todas"] + sorted([
             str(x)
             for x in df_f["Región"].dropna().unique()
@@ -727,7 +733,10 @@ elif st.session_state.seccion_actual == "Stock":
         sel_reg_stk = st.selectbox(
             "2. Región", regiones_stk, key="filtro_reg_stk"
         )
+        if sel_reg_stk != "Todas":
+          df_f = df_f[df_f["Región"] == sel_reg_stk]
 
+        # 3. Provincia (depende de Entidad y Región)
         provincias_stk = ["Todas"] + sorted([
             str(x)
             for x in df_f["Provincia"].dropna().unique()
@@ -736,8 +745,11 @@ elif st.session_state.seccion_actual == "Stock":
         sel_prov_stk = st.selectbox(
             "3. Provincia", provincias_stk, key="filtro_prov_stk"
         )
+        if sel_prov_stk != "Todas":
+          df_f = df_f[df_f["Provincia"] == sel_prov_stk]
 
       with fc2:
+        # 4. Distrito (depende de lo anterior)
         distritos_stk = ["Todas"] + sorted([
             str(x)
             for x in df_f["Distrito"].dropna().unique()
@@ -746,7 +758,10 @@ elif st.session_state.seccion_actual == "Stock":
         sel_dist_stk = st.selectbox(
             "4. Distrito", distritos_stk, key="filtro_dist_stk"
         )
+        if sel_dist_stk != "Todas":
+          df_f = df_f[df_f["Distrito"] == sel_dist_stk]
 
+        # 5. Tipo item
         tipos_item = ["Todos"] + sorted([
             str(x)
             for x in df_f["Tipo Item"].dropna().unique()
@@ -755,15 +770,21 @@ elif st.session_state.seccion_actual == "Stock":
         sel_tipo_item = st.selectbox(
             "5. Tipo item", tipos_item, key="filtro_tipo_item"
         )
+        if sel_tipo_item != "Todos":
+          df_f = df_f[df_f["Tipo Item"] == sel_tipo_item]
 
+        # 6. Part number
         part_numbers = ["Todos"] + sorted([
             str(x)
             for x in df_f["Part number"].dropna().unique()
             if str(x).strip() != "" and str(x).lower() != "nan"
         ])
         sel_pn = st.selectbox("6. Part number", part_numbers, key="filtro_pn")
+        if sel_pn != "Todos":
+          df_f = df_f[df_f["Part number"] == sel_pn]
 
       with fc3:
+        # 7. Tipo estado
         estados_stk = ["Todos"] + sorted([
             str(x)
             for x in df_f["Tipo estado"].dropna().unique()
@@ -772,7 +793,10 @@ elif st.session_state.seccion_actual == "Stock":
         sel_estado = st.selectbox(
             "7. Tipo estado", estados_stk, key="filtro_estado"
         )
+        if sel_estado != "Todos":
+          df_f = df_f[df_f["Tipo estado"] == sel_estado]
 
+        # 8. SN CAMBIO
         sn_cambios = ["Todos"] + sorted([
             str(x)
             for x in df_f["SN CAMBIO"].dropna().unique()
@@ -781,29 +805,8 @@ elif st.session_state.seccion_actual == "Stock":
         sel_sn_cambio = st.selectbox(
             "8. SN CAMBIO", sn_cambios, key="filtro_sn_cambio"
         )
-
-        filtro_obs = st.text_input(
-            "9. OBSERVACIONES (Texto)", "", key="filtro_obs_text"
-        )
-
-    if sel_ent_stk != "Todas":
-      df_f = df_f[df_f["Entidad"] == sel_ent_stk]
-    if sel_reg_stk != "Todas":
-      df_f = df_f[df_f["Región"] == sel_reg_stk]
-    if sel_prov_stk != "Todas":
-      df_f = df_f[df_f["Provincia"] == sel_prov_stk]
-    if sel_dist_stk != "Todas":
-      df_f = df_f[df_f["Distrito"] == sel_dist_stk]
-    if sel_tipo_item != "Todos":
-      df_f = df_f[df_f["Tipo Item"] == sel_tipo_item]
-    if sel_pn != "Todos":
-      df_f = df_f[df_f["Part number"] == sel_pn]
-    if sel_estado != "Todos":
-      df_f = df_f[df_f["Tipo estado"] == sel_estado]
-    if sel_sn_cambio != "Todos":
-      df_f = df_f[df_f["SN CAMBIO"] == sel_sn_cambio]
-    if filtro_obs:
-      df_f = df_f[df_f["OBSERVACIONES"].str.contains(filtro_obs, case=False, na=False)]
+        if sel_sn_cambio != "Todos":
+          df_f = df_f[df_f["SN CAMBIO"] == sel_sn_cambio]
 
     cols_todas = df_stock.columns.tolist()
 
