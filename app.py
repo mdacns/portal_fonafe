@@ -10,6 +10,23 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
+# PANEL DE CONTROL LATERAL (Sincronización para usuarios)
+# ---------------------------------------------------------
+with st.sidebar:
+  st.markdown("### ⚙️ Sincronización")
+  st.markdown(
+      "<p style='font-size:12px;'>Si notas datos desactualizados, usa este"
+      " botón para forzar la recarga:</p>",
+      unsafe_allow_html=True,
+  )
+  if st.button("🔄 Sincronizar / Limpiar Caché", use_container_width=True):
+    st.cache_data.clear()
+    for key in list(st.session_state.keys()):
+      del st.session_state[key]
+    st.success("¡Caché limpiada con éxito!")
+    st.rerun()
+
+# ---------------------------------------------------------
 # CONTROL DE NAVEGACIÓN ESTRICTO POR SESSION_STATE
 # ---------------------------------------------------------
 if "seccion_actual" not in st.session_state:
@@ -152,7 +169,8 @@ def limpiar_dataframe_power_pivot(df):
   return df
 
 
-@st.cache_data
+# TTL de 3600 segundos (1 hora) para auto-refrescar datos y evitar atascos de caché
+@st.cache_data(ttl=3600)
 def cargar_csv_seguro(url):
   df = pd.read_csv(url, header=0)
   primera_col = str(df.columns[0]).lower()
@@ -1176,21 +1194,18 @@ elif st.session_state.seccion_actual == "Mantenimiento":
         if st.button(
             "💾 Guardar cambios del activo", key="btn_guardar_cambios_activo"
         ):
-          # 1. Actualizar memoria local
           for col_mod in df_editado_resultado.columns:
             nuevo_valor = df_editado_resultado.iloc[0][col_mod]
             st.session_state.df_global_stock.loc[idx_registro, col_mod] = (
                 nuevo_valor
             )
 
-          # 2. Preparar el diccionario de datos limpiando las claves y valores
           fila_dict = df_editado_resultado.iloc[0].to_dict()
           datos_limpios = {
               str(k).strip(): ("" if pd.isna(v) else str(v))
               for k, v in fila_dict.items()
           }
 
-          # 3. Enviar cambios a Google Apps Script con la estructura correcta
           payload = {
               "accion": "actualizar",
               "serie": str(serie_a_editar).strip(),
