@@ -1033,11 +1033,17 @@ elif st.session_state.seccion_actual == "Averias":
                 }
 
                 try:
-                  response = requests.post(APPS_SCRIPT_URL, json=payload, timeout=30)
+                  with st.spinner(
+                      "Guardando cambios en Google Sheets, por favor espere..."
+                  ):
+                    response = requests.post(
+                        APPS_SCRIPT_URL, json=payload, timeout=60
+                    )
                   res_json = response.json()
                   if res_json.get("status") == "success":
                     st.session_state.mensaje_exito_cambio = (
-                        "Cambio realizado en app y Google Sheets"
+                        "✅ ¡Cambios guardados exitosamente en la aplicación y"
+                        " en Google Sheets!"
                     )
                   else:
                     st.session_state.mensaje_exito_cambio = (
@@ -1192,7 +1198,12 @@ elif st.session_state.seccion_actual == "Mantenimiento":
           }
 
           try:
-            response = requests.post(APPS_SCRIPT_URL, json=payload, timeout=30)
+            with st.spinner(
+                "Guardando cambios en Google Sheets, por favor espere..."
+            ):
+              response = requests.post(
+                  APPS_SCRIPT_URL, json=payload, timeout=60
+              )
             res_json = response.json()
             if res_json.get("status") == "success":
               st.session_state.mensaje_exito_mant = (
